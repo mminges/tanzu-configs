@@ -30,3 +30,4 @@ vsphere:
   server:
   username:
   password:
+  ssh_public_key:
