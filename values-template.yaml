@@ -1,0 +1,32 @@
+# Default values for workload-cluster.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+cluster_namespace: workload-prod-ns
+cluster_name: workload-prod-cl
+cluster_plan: prod
+autoscaling:
+  enabled: false
+
+control_plane:
+  numCPUs: 2
+  memoryMiB: 8192
+  diskGiB: 40
+worker:
+  numCPUs: 2
+  memoryMiB: 8192
+  diskGiB: 40
+
+imageRepository: projects.registry.vmware.com/tkg
+
+vsphere:
+  datacenter:
+  datastore:
+  folder:
+  networkName:
+  resourcePool:
+  insecure:
+  template:
+  server:
+  username:
+  password:

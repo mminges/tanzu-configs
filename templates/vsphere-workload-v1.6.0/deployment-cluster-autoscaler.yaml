@@ -1,0 +1,50 @@
+{{- if eq .Values.autoscaling.enabled true }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Values.cluster_name }}-cluster-autoscaler
+  name: {{ .Values.cluster_name }}-cluster-autoscaler
+  namespace: {{ .Values.cluster_namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.cluster_name }}-cluster-autoscaler
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.cluster_name }}-cluster-autoscaler
+    spec:
+      containers:
+      - args:
+        - --cloud-provider=clusterapi
+        - --v=4
+        - --clusterapi-cloud-config-authoritative
+        - --kubeconfig=/mnt/{{ .Values.cluster_name }}-kubeconfig/value
+        - --node-group-auto-discovery=clusterapi:clusterName={{ .Values.cluster_name }}
+        - --scale-down-delay-after-add=10m
+        - --scale-down-delay-after-delete=10s
+        - --scale-down-delay-after-failure=3m
+        - --scale-down-unneeded-time=10m
+        - --max-node-provision-time=15m
+        - --max-nodes-total=15
+        command:
+        - /cluster-autoscaler
+        image: {{ .Values.imageRepository }}/cluster-autoscaler:v1.23.0_vmware.1
+        name: {{ .Values.cluster_name }}-cluster-autoscaler
+        volumeMounts:
+        - mountPath: /mnt/{{ .Values.cluster_name }}-kubeconfig
+          name: {{ .Values.cluster_name }}-cluster-autoscaler-volume
+          readOnly: true
+      serviceAccountName: {{ .Values.cluster_name }}-autoscaler
+      terminationGracePeriodSeconds: 10
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      volumes:
+      - name: {{ .Values.cluster_name }}-cluster-autoscaler-volume
+        secret:
+          secretName: {{ .Values.cluster_name }}-kubeconfig
+{{- end }}

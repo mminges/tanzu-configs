@@ -1,0 +1,12 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereCluster
+metadata:
+  name: {{ .Values.cluster_name }}
+  namespace: {{ .Values.cluster_namespace }}
+spec:
+  identityRef:
+    kind: Secret
+    name: {{ .Values.cluster_name }}
+  server: {{ .Values.vsphere.server }}
+  thumbprint: ""

@@ -1,0 +1,28 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  annotations:
+    osInfo: ubuntu,20.04,amd64
+    tkg/plan: {{ .Values.cluster_plan }}
+  labels:
+    tanzuKubernetesRelease: v1.23.8---vmware.2-tkg.1
+    tkg.tanzu.vmware.com/cluster-name: {{ .Values.cluster_name }}
+  name: {{ .Values.cluster_name }}
+  namespace: {{ .Values.cluster_namespace }}
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 100.96.0.0/11
+    services:
+      cidrBlocks:
+      - 100.64.0.0/13
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: {{ .Values.cluster_name }}-control-plane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: VSphereCluster
+    name: {{ .Values.cluster_name }}

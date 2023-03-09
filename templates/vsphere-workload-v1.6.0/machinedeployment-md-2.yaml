@@ -1,0 +1,38 @@
+{{- if eq .Values.cluster_plan "prod" }}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  {{- if .Values.autoscaling.enabled }}
+  annotations:
+    cluster.k8s.io/cluster-api-autoscaler-node-group-max-size: "4"
+    cluster.k8s.io/cluster-api-autoscaler-node-group-min-size: "1"
+  {{- end }}
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ .Values.cluster_name }}
+  name: {{ .Values.cluster_name }}-md-2
+  namespace: {{ .Values.cluster_namespace }}
+spec:
+  clusterName: {{ .Values.cluster_name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: {{ .Values.cluster_name }}
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: {{ .Values.cluster_name }}
+        node-pool: {{ .Values.cluster_name }}-worker-pool
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: {{ .Values.cluster_name }}-md-2
+      clusterName: {{ .Values.cluster_name }}
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: VSphereMachineTemplate
+        name: {{ .Values.cluster_name }}-md-2
+      version: v1.23.8+vmware.2
+{{- end }}

@@ -1,0 +1,16 @@
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ .Values.cluster_name }}
+  name: {{ .Values.cluster_name }}-default-storage-class
+  namespace: {{ .Values.cluster_namespace }}
+spec:
+  clusterSelector:
+    matchLabels:
+      tkg.tanzu.vmware.com/cluster-name: {{ .Values.cluster_name }}
+  resources:
+  - kind: Secret
+    name: {{ .Values.cluster_name }}-default-storage-class
+  strategy: ApplyOnce

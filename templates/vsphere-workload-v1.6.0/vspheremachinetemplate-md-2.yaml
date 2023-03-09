@@ -1,0 +1,28 @@
+{{- if eq .Values.cluster_plan "prod" }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereMachineTemplate
+metadata:
+  annotations:
+    vmTemplateMoid: vm-45
+  name: {{ .Values.cluster_name }}-md-2
+  namespace: {{ .Values.cluster_namespace }}
+spec:
+  template:
+    spec:
+      cloneMode: fullClone
+      datacenter: {{ .Values.vsphere.datacenter }}
+      datastore: {{ .Values.vsphere.datastore }}
+      diskGiB: {{ .Values.worker.diskGiB }}
+      folder: {{ .Values.vsphere.folder }}
+      memoryMiB: {{ .Values.worker.memoryMiB }}
+      network:
+        devices:
+        - dhcp4: true
+          networkName: {{ .Values.vsphere.networkName }}
+      numCPUs: {{ .Values.worker.numCPUs }}
+      resourcePool: {{ .Values.vsphere.resourcePool }}
+      server: {{ .Values.vsphere.server }}
+      storagePolicyName: ""
+      template: {{ .Values.vsphere.template }}
+{{- end }}

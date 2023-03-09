@@ -1,0 +1,22 @@
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  annotations:
+    tkg.tanzu.vmware.com/addon-type: metadata/tkg
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ .Values.cluster_name }}
+  name: {{ .Values.cluster_name }}-tkg-metadata
+  namespace: {{ .Values.cluster_namespace }}
+spec:
+  clusterSelector:
+    matchLabels:
+      tkg.tanzu.vmware.com/cluster-name: {{ .Values.cluster_name }}
+  resources:
+  - kind: Secret
+    name: {{ .Values.cluster_name }}-tkg-metadata-namespace-role
+  - kind: Secret
+    name: {{ .Values.cluster_name }}-tkg-metadata-configmap
+  - kind: Secret
+    name: {{ .Values.cluster_name }}-tkg-metadata-bom-configmap
+  strategy: ApplyOnce

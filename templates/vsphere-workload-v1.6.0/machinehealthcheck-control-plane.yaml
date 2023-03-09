@@ -1,0 +1,19 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: {{ .Values.cluster_name }}-control-plane
+  namespace: {{ .Values.cluster_namespace }}
+spec:
+  clusterName: {{ .Values.cluster_name }}
+  nodeStartupTimeout: 20m
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/control-plane: ""
+  unhealthyConditions:
+  - status: Unknown
+    timeout: 5m
+    type: Ready
+  - status: "False"
+    timeout: 12m
+    type: Ready
