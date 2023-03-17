@@ -2,6 +2,7 @@ apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: GitRepository
 metadata:
   name: tkgm-gitops
+  namespace: tanzu-continuousdelivery-resources
 spec:
   interval: 1m
   url: https://github.com/mminges/tkgm-gitops.git

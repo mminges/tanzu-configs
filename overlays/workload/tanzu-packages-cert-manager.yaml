@@ -8,7 +8,7 @@ spec:
   dependsOn:
     - name: tanzu-packages-cert-manager-sa
   interval: 1m0s
-  path: ./cert-manager
+  path: ../../base/cert-manager
   prune: true
   sourceRef:
     kind: GitRepository
