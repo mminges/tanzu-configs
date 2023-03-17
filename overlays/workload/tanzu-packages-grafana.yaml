@@ -1,0 +1,16 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: tanzu-packages-grafana
+  namespace: tanzu-continuousdelivery-resources
+spec:
+  dependsOn:
+    - name: tanzu-packages-prometheus
+  interval: 1m0s
+  path: ../../base/grafana
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: tkgm-gitops
+    namespace: tanzu-continuousdelivery-resources
