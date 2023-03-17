@@ -3,6 +3,7 @@ apiVersion: packaging.carvel.dev/v1alpha1
 kind: PackageInstall
 metadata:
   annotations:
+    tkg.tanzu.vmware.com/tanzu-package-Secret: prometheus-packages-values
     kapp.k14s.io/update-strategy: "fallback-on-replace"
     kapp.k14s.io/create-strategy: "fallback-on-replace"
   name: prometheus
