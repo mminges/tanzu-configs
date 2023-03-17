@@ -12,4 +12,4 @@ spec:
   packageRef:
     refName: contour.tanzu.vmware.com
     versionSelection:
-      constraints: v1.20.2+vmware.1-tkg.1
+      constraints: 1.20.2+vmware.1-tkg.1
