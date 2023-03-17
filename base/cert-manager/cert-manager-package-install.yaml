@@ -1,0 +1,15 @@
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageInstall
+metadata:
+  annotations:
+    kapp.k14s.io/update-strategy: "fallback-on-replace"
+    kapp.k14s.io/create-strategy: "fallback-on-replace"
+  name: cert-manager
+  namespace: packages
+spec:
+  serviceAccountName: tkgm-gitops-sa
+  packageRef:
+    refName: cert-manager.tanzu.vmware.com
+    versionSelection:
+      constraints: 1.7.2+vmware.1-tkg.1
