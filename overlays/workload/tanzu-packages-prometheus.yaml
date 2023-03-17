@@ -1,0 +1,20 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: tanzu-packages-prometheus
+  namespace: tanzu-continuousdelivery-resources
+spec:
+  dependsOn:
+    - name: tanzu-packages-contour
+  interval: 1m0s
+  path: ../../base/prometheus
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: tkgm-gitops
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: prometheus-server
+      namespace: tanzu-system-monitoring

@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
 - tanzu-packages-cert-manager.yaml
 - tanzu-packages-contour.yaml
+- tanzu-packages-prometheus.yaml
