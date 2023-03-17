@@ -5,8 +5,6 @@ metadata:
   name: tanzu-packages-cert-manager
   namespace: tanzu-continuousdelivery-resources
 spec:
-  dependsOn:
-    - name: tanzu-packages-cert-manager-sa
   interval: 1m0s
   path: ../../base/cert-manager
   prune: true
