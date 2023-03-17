@@ -8,7 +8,7 @@ metadata:
   name: grafana
   namespace: packages
 spec:
-  serviceAccountName: tkmg-gitops-sa
+  serviceAccountName: tkgm-gitops-sa
   packageRef:
     refName: grafana.tanzu.vmware.com
     versionSelection:
