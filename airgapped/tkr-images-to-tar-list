@@ -1,0 +1,329 @@
+set -euo pipefail
+# Note that yq must be version above or equal to version 4.9.2 and below version 5.
+# Processing TKR BOM file tkr-bom-v1.23.8+vmware.2-tkg.1.yaml
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-bom:v1.23.8_vmware.2-tkg.1 --to-tar tkr-bom-v1.23.8_vmware.2-tkg.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/ako-operator:v1.6.0_vmware.16 --to-tar ako-operator-v1.6.0_vmware.16.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/antrea-advanced-debian:v1.5.3 --to-tar antrea-advanced-debian-v1.5.3.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/aws-ebs-csi-driver:v1.8.0_vmware.1 --to-tar csi-aws-ebs-csi-driver-v1.8.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/cluster-api/azuredisk-csi-driver:v1.19.0_vmware.1 --to-tar cluster-api-azuredisk-csi-driver-v1.19.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/cluster-api/byoh-bundle-ubuntu_20.04.1_x86-64_k8s:v1.23.8_vmware.2-tkg.1 --to-tar cluster-api-byoh-bundle-ubuntu_20.04.1_x86-64_k8s-v1.23.8_vmware.2-tkg.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/calico-all/cni:v3.22.1_vmware.1 --to-tar calico-all-cni-v3.22.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/calico-all/kube-controllers:v3.22.1_vmware.1 --to-tar calico-all-kube-controllers-v3.22.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/calico-all/node:v3.22.1_vmware.1 --to-tar calico-all-node-v3.22.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/calico-all/pod2daemon-flexvol:v3.22.1_vmware.1 --to-tar calico-all-pod2daemon-flexvol-v3.22.1_vmware.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/capabilities:v0.25.0-23-g6288c751_vmware.1 --to-tar packages-capabilities-v0.25.0-23-g6288c751_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/secretgen-controller:v0.9.1_vmware.1 --to-tar secretgen-controller-v0.9.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/ccm/manager:v1.23.1_vmware.1 --to-tar ccm-manager-v1.23.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/coredns:v1.8.6_vmware.7 --to-tar coredns-v1.8.6_vmware.7.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-attacher:v3.3.0_vmware.1 --to-tar csi-csi-attacher-v3.3.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-attacher:v3.4.0_vmware.1 --to-tar csi-csi-attacher-v3.4.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-livenessprobe:v2.4.0_vmware.1 --to-tar csi-csi-livenessprobe-v2.4.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-livenessprobe:v2.5.0_vmware.1 --to-tar csi-csi-livenessprobe-v2.5.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-livenessprobe:v2.6.0_vmware.1 --to-tar csi-csi-livenessprobe-v2.6.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-node-driver-registrar:v2.3.0_vmware.1 --to-tar csi-csi-node-driver-registrar-v2.3.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-node-driver-registrar:v2.5.0_vmware.1 --to-tar csi-csi-node-driver-registrar-v2.5.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-node-driver-registrar:v2.5.1_vmware.1 --to-tar csi-csi-node-driver-registrar-v2.5.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-provisioner:v3.0.0_vmware.1 --to-tar csi-csi-provisioner-v3.0.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-provisioner:v3.1.0_vmware.2 --to-tar csi-csi-provisioner-v3.1.0_vmware.2.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/dex:v2.30.2_vmware.1 --to-tar dex-v2.30.2_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/etcd:v3.5.4_vmware.6 --to-tar etcd-v3.5.4_vmware.6.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/snapshot-controller:v6.0.1_vmware.1 --to-tar csi-snapshot-controller-v6.0.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-snapshotter:v6.0.1_vmware.1 --to-tar csi-csi-snapshotter-v6.0.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/snapshot-controller:v5.0.1_vmware.1 --to-tar csi-snapshot-controller-v5.0.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/csi-snapshotter:v5.0.1_vmware.1 --to-tar csi-csi-snapshotter-v5.0.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/guest-cluster-auth-service/guest-cluster-auth-service:v1.0.0 --to-tar guest-cluster-auth-service-guest-cluster-auth-service-v1.0.0.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/linux-resource-bundle:v1.23.8_vmware.2-tkg.1 --to-tar linux-resource-bundle-v1.23.8_vmware.2-tkg.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/windows-resource-bundle:v1.23.8_vmware.2-tkg.1 --to-tar windows-resource-bundle-v1.23.8_vmware.2-tkg.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/kapp-controller:v0.38.4_vmware.1 --to-tar kapp-controller-v0.38.4_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/kube-vip:v0.4.2_vmware.1 --to-tar kube-vip-v0.4.2_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/kube-apiserver:v1.23.8_vmware.2 --to-tar kube-apiserver-v1.23.8_vmware.2.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/kube-controller-manager:v1.23.8_vmware.2 --to-tar kube-controller-manager-v1.23.8_vmware.2.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/kube-proxy:v1.23.8_vmware.2 --to-tar kube-proxy-v1.23.8_vmware.2.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/kube-scheduler:v1.23.8_vmware.2 --to-tar kube-scheduler-v1.23.8_vmware.2.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/pause:3.6 --to-tar pause-3.6.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/pause:3.6-windows-amd64 --to-tar pause-3.6-windows-amd64.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/pause:3.6-windows-amd64-1903 --to-tar pause-3.6-windows-amd64-1903.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/pause:3.6-windows-amd64-1909 --to-tar pause-3.6-windows-amd64-1909.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/pause:3.6-windows-amd64-2004 --to-tar pause-3.6-windows-amd64-2004.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/kubernetes-csi_external-resizer:v1.3.0_vmware.1 --to-tar kubernetes-csi_external-resizer-v1.3.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/kubernetes-csi_external-resizer:v1.4.0_vmware.1 --to-tar kubernetes-csi_external-resizer-v1.4.0_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/kind/node:v1.23.8_vmware.2-tkg.1_v0.11.1 --to-tar kind-node-v1.23.8_vmware.2-tkg.1_v0.11.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/ako:v1.7.2_vmware.2 --to-tar ako-v1.7.2_vmware.2.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/metrics-server:v0.6.1_vmware.1 --to-tar metrics-server-v0.6.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/pinniped:v0.12.1_vmware.1 --to-tar pinniped-v0.12.1_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tanzu_core/addons/tkg-pinniped-post-deploy:v0.12.1_vmware.1-tkg.1 --to-tar tanzu_core-addons-tkg-pinniped-post-deploy-v0.12.1_vmware.1-tkg.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tanzu_core/addons/tanzu-addons-manager:v0.25.0-23-g6288c751 --to-tar tanzu_core-addons-tanzu-addons-manager-v0.25.0-23-g6288c751.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tanzu_core/addons/tkg-pinniped-post-deploy:v0.25.0-23-g6288c751 --to-tar tanzu_core-addons-tkg-pinniped-post-deploy-v0.25.0-23-g6288c751.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/addons-manager:v1.6.0_vmware.1-tkg.1 --to-tar packages-core-addons-manager-v1.6.0_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/ako-operator:v1.6.0_vmware.16-tkg.1 --to-tar packages-core-ako-operator-v1.6.0_vmware.16-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/antrea:v1.5.3_tkg.1-advanced --to-tar packages-core-antrea-v1.5.3_tkg.1-advanced.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/aws-ebs-csi-driver:v1.8.0_vmware.1-tkg.1 --to-tar packages-core-aws-ebs-csi-driver-v1.8.0_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/azuredisk-csi-driver:v1.19.0_vmware.1-tkg.1 --to-tar packages-core-azuredisk-csi-driver-v1.19.0_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/calico:v3.22.1_vmware.1-tkg.1 --to-tar packages-core-calico-v3.22.1_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/guest-cluster-auth-service:v1.0.0_tkg.1 --to-tar packages-core-guest-cluster-auth-service-v1.0.0_tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/kapp-controller:v0.38.4_vmware.1-tkg.1 --to-tar packages-core-kapp-controller-v0.38.4_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/load-balancer-and-ingress-service:v1.7.2_vmware.2-tkg.1 --to-tar packages-core-load-balancer-and-ingress-service-v1.7.2_vmware.2-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/metrics-server:v0.6.1_vmware.1-tkg.1 --to-tar packages-core-metrics-server-v0.6.1_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/pinniped:v0.12.1_vmware.1-tkg.1 --to-tar packages-core-pinniped-v0.12.1_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/secretgen-controller:v0.9.1_vmware.1-tkg.1 --to-tar packages-core-secretgen-controller-v0.9.1_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/repo:v1.23.8_vmware.2-tkg.1 --to-tar packages-core-repo-v1.23.8_vmware.2-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/vsphere-cpi:v1.23.1_vmware.1-tkg.1 --to-tar packages-core-vsphere-cpi-v1.23.1_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/vsphere-csi:v2.5.2_vmware.1-tkg.1 --to-tar packages-core-vsphere-csi-v2.5.2_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/core/vsphere-pv-csi:v2.4.2_vmware.1-tkg.1 --to-tar packages-core-vsphere-pv-csi-v2.4.2_vmware.1-tkg.1.tar
+
+imgpkg copy -b projects.registry.vmware.com/tkg/packages/tkg-storageclass:v0.25.0-23-g6288c751_vmware.1 --to-tar packages-tkg-storageclass-v0.25.0-23-g6288c751_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/vsphere-block-csi-driver:v2.5.2_vmware.1 --to-tar csi-vsphere-block-csi-driver-v2.5.2_vmware.1.tar
+
+imgpkg copy -i projects.registry.vmware.com/tkg/csi/volume-metadata-syncer:v2.5.2_vmware.1 --to-tar csi-volume-metadata-syncer-v2.5.2_vmware.1.tar
+# Finished processing TKR BOM file tkr-bom-v1.23.8+vmware.2-tkg.1.yaml
+
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v1 --to-tar tkr-compatibility-v1.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v10 --to-tar tkr-compatibility-v10.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v11 --to-tar tkr-compatibility-v11.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v12 --to-tar tkr-compatibility-v12.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v13 --to-tar tkr-compatibility-v13.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v14 --to-tar tkr-compatibility-v14.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v15 --to-tar tkr-compatibility-v15.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v16 --to-tar tkr-compatibility-v16.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v17 --to-tar tkr-compatibility-v17.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v18 --to-tar tkr-compatibility-v18.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v19 --to-tar tkr-compatibility-v19.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v2 --to-tar tkr-compatibility-v2.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v20 --to-tar tkr-compatibility-v20.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v21 --to-tar tkr-compatibility-v21.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v22 --to-tar tkr-compatibility-v22.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v23 --to-tar tkr-compatibility-v23.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v3 --to-tar tkr-compatibility-v3.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v4 --to-tar tkr-compatibility-v4.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v5 --to-tar tkr-compatibility-v5.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v6 --to-tar tkr-compatibility-v6.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v7 --to-tar tkr-compatibility-v7.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v8 --to-tar tkr-compatibility-v8.tar
+
+# Finished processing TKR compatibility image
+# Processing TKR compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkr-compatibility:v9 --to-tar tkr-compatibility-v9.tar
+
+# Finished processing TKR compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v1 --to-tar tkg-compatibility-v1.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v10 --to-tar tkg-compatibility-v10.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v11 --to-tar tkg-compatibility-v11.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v13 --to-tar tkg-compatibility-v13.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v14 --to-tar tkg-compatibility-v14.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v15 --to-tar tkg-compatibility-v15.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v2 --to-tar tkg-compatibility-v2.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v3 --to-tar tkg-compatibility-v3.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v4 --to-tar tkg-compatibility-v4.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v5 --to-tar tkg-compatibility-v5.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v6 --to-tar tkg-compatibility-v6.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v7 --to-tar tkg-compatibility-v7.tar
+
+# Finished processing TKG compatibility image
+# Processing TKG compatibility image
+
+imgpkg copy -i projects.registry.vmware.com/tkg/tkg-compatibility:v8 --to-tar tkg-compatibility-v8.tar
+
+# Finished processing TKG compatibility image
