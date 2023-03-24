@@ -16,3 +16,5 @@ k apply -f gitrepository.yaml
 ```bash
 k apply -f tanzu-packages-kustomization.yaml
 ```
+
+k create ns tanzu-fluxcd-packageinstalls
