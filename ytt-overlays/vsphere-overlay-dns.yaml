@@ -1,0 +1,16 @@
+#@ load("@ytt:overlay", "overlay")
+#@ load("@ytt:data", "data")
+
+#@overlay/match by=overlay.subset({"kind":"VSphereMachineTemplate"}),expects="1+"
+---
+spec:
+  template:
+    spec:
+      network:
+        devices:
+        #@overlay/match by=overlay.all, expects="1+"
+        -
+          #@overlay/match missing_ok=True
+          nameservers: ["8.8.8.8"]
+          #@overlay/match missing_ok=True
+          searchDomains: ["google.com"]
