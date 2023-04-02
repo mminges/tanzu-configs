@@ -1,0 +1,33 @@
+# Default values for 2.1.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+cluster:
+  namespace: default
+  name: workload
+nameOverride: ""
+fullnameOverride: ""
+
+# values for vSphere workload clusters
+vSphere:
+
+  enabled: true
+
+  vcsaCredentials:
+    # vSphere SSO or Active Directory
+    username: administrator@vsphere.local
+    password: password
+
+  # AVI
+  # settings for AVI/NSX Advanced Load Balancer
+  advancedLoadBalancer:
+    enabled: true
+
+  # can be enabled as an alternative to AVI
+  # does not provide IPAM functionality
+  kubeVIP:
+    enabled: false
+
+    # a static IP allocated for controlplane endpoint
+    controlPlaneIP: "10.1.1.200"
+

@@ -1,0 +1,326 @@
+apiVersion: cpi.tanzu.vmware.com/v1alpha1
+kind: VSphereCPIConfig
+metadata:
+  name: {{ .Values.cluster.name }}
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  vsphereCPI:
+    mode: vsphereCPI
+    tlsCipherSuites: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+    vmNetwork:
+      excludeExternalSubnetCidr: 10.1.1.200/32
+      excludeInternalSubnetCidr: 10.1.1.200/32
+---
+apiVersion: run.tanzu.vmware.com/v1alpha3
+kind: ClusterBootstrap
+metadata:
+  annotations:
+    tkg.tanzu.vmware.com/add-missing-fields-from-tkr: v1.24.10---vmware.1-tkg.2
+  name: {{ .Values.cluster.name }}
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  additionalPackages:
+  - refName: metrics-server*
+  - refName: secretgen-controller*
+  - refName: pinniped*
+  cpi:
+    refName: vsphere-cpi*
+    valuesFrom:
+      providerRef:
+        apiGroup: cpi.tanzu.vmware.com
+        kind: VSphereCPIConfig
+        name: {{ .Values.cluster.name }}
+  kapp:
+    refName: kapp-controller*
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.cluster.name }}
+  namespace: {{ .Values.cluster.namespace }}
+stringData:
+{{- if .Values.vSphere.enabled }}
+  password: {{ .Values.vSphere.vcsaCredentials.password }}
+  username: {{ .Values.vSphere.vcsaCredentials.username }}
+{{- end }}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  annotations:
+    osInfo: ubuntu,20.04,amd64
+    tkg.tanzu.vmware.com/cluster-controlplane-endpoint: 10.1.1.200
+    tkg/plan: dev
+  labels:
+    tkg.tanzu.vmware.com/cluster-name: {{ .Values.cluster.name }}
+  name: {{ .Values.cluster.name }}
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 100.96.0.0/11
+    services:
+      cidrBlocks:
+      - 100.64.0.0/13
+  topology:
+    class: tkg-vsphere-default-v1.0.0
+    controlPlane:
+      metadata:
+        annotations:
+          run.tanzu.vmware.com/resolve-os-image: image-type=ova,os-name=ubuntu
+      replicas: 1
+    variables:
+    - name: cni
+      value: antrea
+    - name: controlPlaneCertificateRotation
+      value:
+        activate: true
+        daysBefore: 90
+    - name: auditLogging
+      value:
+        enabled: false
+    - name: podSecurityStandard
+      value:
+        audit: baseline
+        deactivated: false
+        warn: baseline
+    - name: apiServerEndpoint
+      value: 10.1.1.200
+    - name: aviAPIServerHAProvider
+      value: false
+    - name: vcenter
+      value:
+        cloneMode: fullClone
+        datacenter: /Lighthouse
+        datastore: /Lighthouse/datastore/n2_ssd
+        folder: /Lighthouse/vm
+        network: /Lighthouse/network/lighthouse-game-3002
+        resourcePool: /Lighthouse/host/Legacy/Resources
+        server: 10.21.1.45
+        storagePolicyID: ""
+        template: /Lighthouse/vm/ubuntu-2004-efi-kube-v1.24.10+vmware.1
+        tlsThumbprint: ""
+    - name: user
+      value:
+        sshAuthorizedKeys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDq5xjk/vGPILtrI1ds+ztRxL5WPCq2b9SuI3Sf017m5M5p9sieKE5n9QeJidX8EVWHCkAUnKsDk7i15ZKmqfkD0RjClxpgCzo3qmNuPK1GQWh/rwWf9fwedAXEWmzetuVVOGoOkk1Cg2ZG/CU1ozrgE8Jg2qr3OarX0ncejimXqu76/7PTwHwOoX0ub2xg8AFguWWRVtSTft1YsRDG7p0xVi246tkRu4afEmuWaioltAQnXd7U/4fF7c3yDKL2fmQdxjLx5UYvvFVXyKzT3LdF7E9L/D6zevYgod04Ob5woIJKgmU5/NTidythKt6WCr3DkjtFqotnLw0LPLPBO1C0k6tqmbtryTWiTBEfIRKJ7XeHfsLp+bg7ce9C9uwTNSPMTyLgli7172DZRTXNCP54gf1b5ZZpzZJC6mKQnBwKYJmm0I3Tmv+J8FdMu3hUmaZ9lrRvShjNN6bLLcqZJEjvWiNNlxG+T3mabfQqnxygkVcAjPxyefyemROOIORdU+0=
+    - name: controlPlane
+      value:
+        machine:
+          diskGiB: 40
+          memoryMiB: 16384
+          numCPUs: 4
+    - name: worker
+      value:
+        count: 1
+        machine:
+          diskGiB: 40
+          memoryMiB: 16384
+          numCPUs: 4
+    version: v1.24.10+vmware.1-tkg.2
+    workers:
+      machineDeployments:
+      - class: tkg-worker
+        metadata:
+          annotations:
+            cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "4"
+            cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: "1"
+            run.tanzu.vmware.com/resolve-os-image: image-type=ova,os-name=ubuntu
+        name: md-0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Values.cluster.name }}-cluster-autoscaler
+  name: {{ .Values.cluster.name }}-cluster-autoscaler
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.cluster.name }}-cluster-autoscaler
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.cluster.name }}-cluster-autoscaler
+    spec:
+      containers:
+      - args:
+        - --cloud-provider=clusterapi
+        - --v=4
+        - --clusterapi-cloud-config-authoritative
+        - --kubeconfig=/mnt/{{ .Values.cluster.name }}-kubeconfig/value
+        - --node-group-auto-discovery=clusterapi:clusterName={{ .Values.cluster.name }}
+        - --scale-down-delay-after-add=10m
+        - --scale-down-delay-after-delete=10s
+        - --scale-down-delay-after-failure=3m
+        - --scale-down-unneeded-time=5m
+        - --max-node-provision-time=15m
+        - --max-nodes-total=5
+        command:
+        - /cluster-autoscaler
+        image: projects.registry.vmware.com/tkg/cluster-autoscaler:v1.24.0_vmware.1
+        name: {{ .Values.cluster.name }}-cluster-autoscaler
+        volumeMounts:
+        - mountPath: /mnt/{{ .Values.cluster.name }}-kubeconfig
+          name: {{ .Values.cluster.name }}-cluster-autoscaler-volume
+          readOnly: true
+      serviceAccountName: {{ .Values.cluster.name }}-autoscaler
+      terminationGracePeriodSeconds: 10
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+      volumes:
+      - name: {{ .Values.cluster.name }}-cluster-autoscaler-volume
+        secret:
+          secretName: {{ .Values.cluster.name }}-kubeconfig
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.cluster.name }}-autoscaler-workload
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-autoscaler-workload
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.cluster.name }}-autoscaler
+  namespace: {{ .Values.cluster.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.cluster.name }}-autoscaler-management
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-autoscaler-management
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.cluster.name }}-autoscaler
+  namespace: {{ .Values.cluster.namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.cluster.name }}-autoscaler
+  namespace: {{ .Values.cluster.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-autoscaler-workload
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  - persistentvolumes
+  - pods
+  - replicationcontrollers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/eviction
+  verbs:
+  - create
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - csinodes
+  - storageclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - get
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-autoscaler-management
+rules:
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machinedeployments
+  - machines
+  - machinesets
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+  - patch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machinedeployments/scale
+  - machinesets/scale
+  verbs:
+  - get
+  - update
