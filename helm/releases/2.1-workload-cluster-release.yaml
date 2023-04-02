@@ -1,0 +1,22 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: 2.1-workload-cluster-release
+  namespace: default
+spec:
+  interval: 1m
+  chart:
+    spec:
+      chart: ./helm/cluster-provisioning/2.1
+      sourceRef:
+        kind: GitRepository
+        name: tkgm-gitops 
+        namespace: tanzu-continuousdelivery-resources
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  # values:
+  #   key: value
