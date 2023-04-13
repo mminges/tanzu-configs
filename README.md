@@ -13,23 +13,31 @@ tanzu package install fluxcd-kustomize-controller -p fluxcd-kustomize-controller
 ```bash
 k create ns packages
 ```
+
 ```bash
 k create sa tkgm-gitops-sa --namespace=packages
 ```
+
 ```bash
 k create clusterrolebinding tkgm-gitops-crb --clusterrole=cluster-admin --serviceaccount=packages:tkgm-gitops-sa
 ```
+
 ```bash
 k create ns tanzu-continuousdelivery-resources
 ```
 
 ```bash
-k create secret generic tkgm-gitops --from-file=identity=./tkg --from-file=kmown_hosts=known_hosts -n tanzu-continuousdelivery-resources
+ssh-keyscan github.com > ./known_hosts
+```
+
+```bash
+k create secret generic tkgm-gitops --from-file=identity=./tkg --from-file=known_hosts=known_hosts -n tanzu-continuousdelivery-resources
 ```
 
 ```bash
 k apply -f gitrepository.yaml
 ```
+
 ```bash
 k apply -f tanzu-packages-kustomization.yaml
 ```
