@@ -6,7 +6,7 @@
 - IaaS Paving
   - [Tools Infra](#tools-infra-setup)
     - [Offline Harbor Install](#offline-harbor-install)
-    - [File Share Setup](#file-share-setup)
+    - [Mount File Share](#mount-file-share)
   - [TMC-SM Infra](#tmc-sm-infra)
 - [Airgapped TMC-SM Install](#airgapped-tmc-sm-install)
 
@@ -195,7 +195,7 @@ az storage file upload --connection-string $CONNECTION_STRING --share-name airga
 
 [back-to-top](#contents)
 
-## File Share Mount
+## Mount File Share
 Mount the file share to both the jumpbox and harbor vms.
 
 In the Azure Portal, navigate to your storage account. Then select File Shares. Drill in to the `airgapped-files` file share that was created earlier. Click Connect then switch to Linux in the pop-up window and expand Show Script. Copy and run the script on both VMs. Your file share should now be mounted under `/mnt/airgapped-files` on the VMs.
