@@ -3,10 +3,10 @@
 ## Contents
 - [Prerequisites](#prerequisites)
 - [Account Setup](#account-setup)
-- [IaaS Paving](#iaas-paving)
+- IaaS Paving
   - [Tools Infra](#tools-infra-setup)
-    - [File Share Setup](#file-share-setup)
     - [Offline Harbor Install](#offline-harbor-install)
+    - [File Share Setup](#file-share-setup)
   - [TMC-SM Infra](#tmc-sm-infra)
 - [Airgapped TMC-SM Install](#airgapped-tmc-sm-install)
 
@@ -41,13 +41,11 @@ az login --service-principal -u $APP_ID -p $PASSWORD --tenant $TENANT_ID
 
 [back-to-top](#contents)
 
-## IaaS Paving
+
+## Tools Infra Paving
 
 In this section, we will create a tools resource group in Azure which will contain our Jumpbox and Harbor Container Registry along with necessary services to support an airgapped installation of TMC-sm.
 
-[back-to-top](#contents)
-
-### Tools Infra Paving
 
 Create resource group for common tools
 > Note: location will differ depending on what cloud you are targeting and your use geographic location. To get a list of locations for your targeted cloud, run `az account list-locations | jq -r '.[].name'`
@@ -161,7 +159,7 @@ Connection to mpmtmc.file.core.windows.net (10.0.0.5) 443 port [tcp/https] succe
 
 [back-to-top](#contents)
 
-### Offline Harbor Install
+## Offline Harbor Install
 Now to create the offline Harbor VM:
 ```
 az vm create --resource-group tools --name harbor --image Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:22.04.202307010 --ssh-key-values ~/.ssh/tmc.pub --nsg internal --vnet-name tools --subnet tools --public-ip-address "" --size Standard_D4s_v3 --os-disk-size-gb 160 --admin-username ubuntu
@@ -195,6 +193,9 @@ az storage file upload --connection-string $CONNECTION_STRING --share-name airga
 az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name mpmtmc --source docker-compose-plugin_2.18.1-1~ubuntu.22.04~jammy_amd64.deb
 ```
 
+[back-to-top](#contents)
+
+## File Share Mount
 Mount the file share to both the jumpbox and harbor vms.
 
 In the Azure Portal, navigate to your storage account. Then select File Shares. Drill in to the `airgapped-files` file share that was created earlier. Click Connect then switch to Linux in the pop-up window and expand Show Script. Copy and run the script on both VMs. Your file share should now be mounted under `/mnt/airgapped-files` on the VMs.
