@@ -10,7 +10,7 @@
   - [TMC-SM Infra](#tmc-sm-infra)
 - [Airgapped TMC-SM Install](#airgapped-tmc-sm-install)
 
-### Prerequisites
+## Prerequisites
 
 - Need the Azure `az` client installed
 - Need `jq` client installed
@@ -22,7 +22,7 @@
 
 [back-to-top](#contents)
 
-### Account Setup
+## Account Setup
 
 For automation purposes (scripting or terraform) we are gonna create a Service Principal in Azure for our subscription
 
@@ -41,13 +41,13 @@ az login --service-principal -u $APP_ID -p $PASSWORD --tenant $TENANT_ID
 
 [back-to-top](#contents)
 
-### IaaS Paving
+## IaaS Paving
 
 In this section, we will create a tools resource group in Azure which will contain our Jumpbox and Harbor Container Registry along with necessary services to support an airgapped installation of TMC-sm.
 
 [back-to-top](#contents)
 
-##### Tools Infra Paving
+### Tools Infra Paving
 
 Create resource group for common tools
 > Note: location will differ depending on what cloud you are targeting and your use geographic location. To get a list of locations for your targeted cloud, run `az account list-locations | jq -r '.[].name'`
@@ -159,7 +159,9 @@ ubuntu@jumpbox:~$ nc -zv mpmtmc.file.core.windows.net 443
 Connection to mpmtmc.file.core.windows.net (10.0.0.5) 443 port [tcp/https] succeeded!
 ```
 
-#### Offline Harbor Install
+[back-to-top](#contents)
+
+### Offline Harbor Install
 Now to create the offline Harbor VM:
 ```
 az vm create --resource-group tools --name harbor --image Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:22.04.202307010 --ssh-key-values ~/.ssh/tmc.pub --nsg internal --vnet-name tools --subnet tools --public-ip-address "" --size Standard_D4s_v3 --os-disk-size-gb 160 --admin-username ubuntu
