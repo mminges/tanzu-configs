@@ -31,6 +31,8 @@
 
 For automation purposes (scripting or terraform) we are gonna create a Service Principal in Azure for our subscription
 
+> NOTE: Service Principal names must be unique within the tenant
+
 ```bash
 SUBSCRIPTION_ID=$(az account show | jq -r '.id')
 az ad sp create-for-rbac --name="tmc-sm" --role="Owner" --scopes="/subscriptions/$SUBSCRIPTION_ID"
