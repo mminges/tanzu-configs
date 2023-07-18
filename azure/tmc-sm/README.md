@@ -147,7 +147,7 @@ Create a DNS A record for the storage account / file share
 ```bash
 private_endpoint_nic_id=$(az network private-endpoint show -g tools -n mpmtmc-privateendpoint | jq -r '.networkInterfaces[0].id')
 
-private_endpoint_ip=$(az network nic show --ids $private_endpoint_nic_id | jq -r '.ipConfigurations[0].privateIpAddress')
+private_endpoint_ip=$(az network nic show --ids $private_endpoint_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
 
 az network private-dns record-set a create -g tools --zone-name privatelink.file.core.windows.net --name mpmtmc
 
