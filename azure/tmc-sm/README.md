@@ -215,10 +215,14 @@ https://learn.microsoft.com/en-us/azure/storage/files/storage-how-to-use-files-l
 
 ## Offline Harbor Install
 
-SSH onto Harbor VM so we can install docker and the offline installer and switch to root
+Generate the CA to be used by TMC and the Harbor server certificate which will be signed by that same CA
 ```bash
-sudo su -
+./gen_certs.sh
 ```
+
+SCP the certs directory thats generated from the above script onto Harbor VM so we can install docker and the offline harbor installer
+
+> The following commands should be run as the root user: `sudo su -`
 
 Make the data directory
 ```bash
@@ -255,14 +259,14 @@ Copy harbor.crt as harbor-chain.crt:
 cp /home/ubuntu/certs/harbor.crt /data/harbor-chain.crt
 ```
 
-Add the contents of the certman ca cert to the harbor chain:
+Add the contents of the ca cert to the harbor chain:
 ```bash
-cat /home/ubuntu/certs/certman_ca.crt >> /data/harbor-chain.crt
+cat /home/ubuntu/certs/ca.crt >> /data/harbor-chain.crt
 ```
 
-Copy certman ca cert into ca-certificates:
+Copy ca cert into ca-certificates:
 ```bash
-cp /home/ubuntu/certs/certman_ca.crt /usr/local/share/ca-certificates/
+cp /home/ubuntu/certs/ca.crt /usr/local/share/ca-certificates/
 ```
 
 Update ca-certificates
