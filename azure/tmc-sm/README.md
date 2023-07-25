@@ -24,7 +24,7 @@
   `az cloud set --name AzureCloud`
 - Login: `az login`
 - If you have access to more than one Azure Subscriptions, then run `az account list` to view your Subscriptions and set the default to the Subscription where you want the Jumpbox installed.
-> `az account set --subsciption SUBSCRIPTION_ID` where SUBSCRIPTION_ID is the value of the `id` field.
+> `az account set --subscription SUBSCRIPTION_ID` where SUBSCRIPTION_ID is the value of the `id` field.
 
 [back-to-top](#contents)
 
