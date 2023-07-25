@@ -2,3 +2,5 @@ setup/
 values.yaml
 
 azure/tmc-sm/certs
+azure/tmc-sm/.envrc
+azure/tmc-sm/tmc-kubeconfig.yaml
