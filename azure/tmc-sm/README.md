@@ -140,7 +140,26 @@ jumpbox_nic_id=$(az vm show -g tools -n jumpbox | jq -r '.networkProfile.network
 jumpbox_public_ip_id=$(az network nic show --ids $jumpbox_nic_id | jq -r '.ipConfigurations[0].publicIPAddress.id')
 jumpbox_public_ip=$(az network public-ip show --ids $jumpbox_public_ip_id | jq -r '.ipAddress')
 
-ssh -i ~/.ssh/tmc ubuntu@$jumpbox_public_ip
+harbor_nic_id=$(az vm show -g tools -n harbor | jq -r '.networkProfile.networkInterfaces[0].id')
+harbor_private_ip=$(az network nic show --ids $harbor_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
+
+cat <<EOF >> ~/.ssh/config
+
+Host tmcsmjumpbox
+  Hostname $jumpbox_public_ip
+  User ubuntu
+  IdentityFile ~/.ssh/tmc
+  DynamicForward 8123
+  LogLevel QUIET
+
+Host tmcsmharbor
+  ProxyJump tmcsmjumpbox
+  User ubuntu
+  Hostname $harbor_private_ip
+  IdentityFile ~/.ssh/tmc
+EOF
+
+ssh tmcsmjumpbox
 ```
 
 After ssh'ing to the server validate egress to internet is blocked:
@@ -201,8 +220,8 @@ az network private-dns record-set a add-record -g tools --zone-name privatelink.
 
 Test connectivity to the file share from the jumpbox now that the private endpoint, private dns zone, dns vnet link and dns A record were created for the storage account / file share
 ```bash
-scp -i ~/.ssh/tmc .envrc ubuntu@$jumpbox_public_ip:.
-ssh -i ~/.ssh/tmc ubuntu@$jumpbox_public_ip
+scp .envrc tmcsmjumpbox:. 
+ssh tmcsmjumpbox 
 source .envrc
 
 nslookup $STORAGE_ACCOUNT.file.core.windows.net
@@ -234,7 +253,7 @@ Connection to mpmtmc.file.core.windows.net (10.0.0.5) 443 port [tcp/https] succe
 Upload docker deb packages and harbor offline packages for an airgapped harbor install for use with an ubuntu 22.04 vm created above
 ```bash
 mkdir airgapped-files
-cd airgapped-files
+pushd airgapped-files
 
 # harbor offline installer
 wget https://github.com/goharbor/harbor/releases/download/v2.8.1/harbor-offline-installer-v2.8.1.tgz
@@ -257,6 +276,8 @@ az storage file upload --connection-string $CONNECTION_STRING --share-name airga
 az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name $STORAGE_ACCOUNT --source docker-ce_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
 az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name $STORAGE_ACCOUNT --source docker-ce-cli_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
 az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name $STORAGE_ACCOUNT --source docker-compose-plugin_2.18.1-1~ubuntu.22.04~jammy_amd64.deb
+
+popd
 ```
 
 [back-to-top](#contents)
@@ -274,11 +295,18 @@ https://learn.microsoft.com/en-us/azure/storage/files/storage-how-to-use-files-l
 ## Offline Harbor Install
 
 Generate the CA to be used by TMC and the Harbor server certificate which will be signed by that same CA
+
+> NOTE: Update the locality in the `gen_certs.sh` script to suit your needs
+
 ```bash
 ./gen_certs.sh
 ```
 
-SCP the certs directory thats generated from the above script onto Harbor VM so we can install docker and the offline harbor installer
+SCP the certs directory that is generated from the above script onto the Harbor VM so we can install docker and the offline harbor installer
+```bash
+scp -r certs/ tmcsmharbor:.
+ssh tmcsmharbor
+```
 
 > The following commands should be run as the root user: `sudo su -`
 
@@ -289,22 +317,22 @@ mkdir /data
 
 Install docker-ce cli package:
 ```bash
-dpkg -i docker-ce-cli_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
+dpkg -i /mnt/airgapped-files/docker-ce-cli_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
 ```
 
 Install containerd.io package:
 ```bash
-dpkg -i containerd.io_1.6.9-1_amd64.deb
+dpkg -i /mnt/airgapped-files/containerd.io_1.6.9-1_amd64.deb
 ```
 
 Install docker-ce:
 ```bash
-dpkg -i docker-ce_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
+dpkg -i /mnt/airgapped-files/docker-ce_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
 ```
 
 Install docker compose
 ```bash
-dpkg -i docker-compose-plugin_2.18.1-1~ubuntu.22.04~jammy_amd64.deb
+dpkg -i /mnt/airgapped-files/docker-compose-plugin_2.18.1-1~ubuntu.22.04~jammy_amd64.deb
 ```
 
 Check docker service status:
@@ -357,6 +385,8 @@ Deploy harbor:
 cd /data/harbor
 ./install.sh --with-trivy --with-notary
 ```
+
+[back-to-top](#contents)
 
 ## Make Harbor Accessible
 With harbor now stood up, we need to create a private DNS zone that has an A record for Harbor and eventually wildcard records for TMC-sm
