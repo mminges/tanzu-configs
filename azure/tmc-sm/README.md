@@ -13,6 +13,7 @@
   - [TMC-SM Infra](#tmc-sm-infra-paving)
     - [Create Azure Firewall](#create-azure-firewall)
     - [Create Airgapped AKS Cluster](#create-airgapped-aks-cluster)
+    - [Add Custom CA to AKS CLuster](#add-custom-ca-to-aks-cluster)
 - [Airgapped TMC-SM Install](#airgapped-tmc-sm-install)
 
 ## Prerequisites
@@ -308,7 +309,7 @@ az network private-dns link vnet create -g tools --zone-name mpmtkglab.io --name
 
 # Grab the Harbor private IP address
 harbor_nic_id=$(az vm show -g tools -n harbor | jq -r '.networkProfile.networkInterfaces[0].id')
-harbor_private_ip=$(az network nic show --ids $harbor_nic_id | jq -r '.ipConfigurations[0].privateIpAddress')
+harbor_private_ip=$(az network nic show --ids $harbor_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
 
 #Create the DNS A record for harbor using the private ip address
 az network private-dns record-set a create -g tools --zone-name mpmtkglab.io --name harbor
@@ -373,13 +374,14 @@ az network vnet subnet create -g tools --vnet-name tools -n AzureFirewallSubnet 
 Create Azure Firewall
 ```bash
 az extension add --name azure-firewall
+az network firewall create --name aksfw -g tools
 az network public-ip create -g tools -n aksfw --sku Standard
 az network firewall ip-config create --firewall-name aksfw --name aksfw --public-ip-address aksfw -g tools --vnet-name tools
 ```
 
 Create Azure Route Table and route for egress to route to the firewall's private ip
 ```bash
-fw_private_ip=$(az network firewall show -g tools -n aksfw | jq -r '.ipConfigurations[0].privateIpAddress')
+fw_private_ip=$(az network firewall show -g tools -n aksfw | jq -r '.ipConfigurations[0].privateIPAddress')
 az network route-table create -g tools -n aksfw
 az network route-table route create -g tools -n aksfw --route-table-name aksfw --address-prefix 0.0.0.0/0 --next-hop-type VirtualAppliance --next-hop-ip-address $fw_private_ip
 ```
@@ -423,6 +425,52 @@ az network firewall application-rule create  --firewall-name aksfw --collection-
 Create AKS private cluster with user defined routes
 ```bash
 az aks create -n tmc-sm -g tmcsm --disable-public-fqdn --enable-private-cluster --max-pods 40 --enable-cluster-autoscaler --min-count 1 --max-count 7 --network-plugin azure --network-policy calico --node-vm-size standard_d4s_v3 --node-osdisk-size 40 --os-sku Ubuntu --private-dns-zone system --service-cidr 10.0.0.0/16 --dns-service-ip 10.0.0.10 --vnet-subnet-id $subnet_id --zones 1 --zones 2 --zones 3 --outbound-type userDefinedRouting --load-balancer-sku standard --client-secret $CLIENT_SECRET --service-principal $CLIENT_ID
+```
+
+Create dns vnet link for the private dns zone created as part of the aks cluster creation as well as for the priavte dns zone for our tmc private dns zone:
+```bash
+aks_resource_group=$(az group list | jq -r '.[] | select(.tags."aks-managed-cluster-name" == "tmc-sm") .name')
+aks_private_dns_zone_name=$(az network private-dns zone list -g $aks_resource_group | jq -r '.[0].name')
+network_id=$(az network vnet show -g tools -n tools | jq -r '.id')
+tmc_network_id=$(az network vnet show -g tmcsm -n tmcsm | jq -r '.id')
+
+az network private-dns link vnet create -g $aks_resource_group --zone-name $aks_private_dns_zone_name --name tools-dnslink --virtual-network $network_id --registration-enabled false
+az network private-dns link vnet create -g tools --zone-name mpmtkglab.io --name tmc-dnslink --virtual-network $tmc_network_id --registration-enabled false
+```
+
+Export the kubeconfig for the cluster:
+```bash
+az aks get-credentials -g tmcsm -n tmc-sm -f tmc-kubeconfig.yaml
+```
+
+SCP the kubeconfig file to the jumpbox and install kubectl from the fileshare mount to access your cluster
+
+[back-to-top](#contents)
+
+## Add Custom CA to AKS CLuster
+
+In order to add our custom CA to the AKS cluster's nodes we will need to install an azure extension and register a feature flag
+```bash
+az extension add --name aks-preview
+az extension update --name aks-preview
+az feature register --namespace "Microsoft.ContainerService" --name "CustomCATrustPreview"
+```
+
+The last command can take several minutes to complete. Check the status of the registration by running the following:
+```bash
+az feature show --namespace "Microsoft.ContainerService" --name "CustomCATrustPreview"
+```
+
+> Note: Don't proceed until the status shows `Registered`
+
+Refresh the registration of the Microsoft.ContainerService resource provider:
+```bash
+az provider register --namespace Microsoft.ContainerService
+```
+
+Now add the custom CA to the AKS nodes:
+```bash
+az aks update -g tmcsm -n tmc-sm --custom-ca-trust-certificates certs/ca.crt 
 ```
 
 [back-to-top](#contents)
