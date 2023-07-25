@@ -36,11 +36,14 @@ For automation purposes (scripting or terraform) we are gonna create a Service P
 
 ```bash
 SUBSCRIPTION_ID=$(az account show | jq -r '.id')
-az ad sp create-for-rbac --name="tmc-sm" --role="Owner" --scopes="/subscriptions/$SUBSCRIPTION_ID"
-```
-the output of the above will have the `appId` and `password` for the service principal 
+SP_METADATA=$(az ad sp create-for-rbac --name="tmc-sm" --role="Owner" --scopes="/subscriptions/$SUBSCRIPTION_ID" | jq -r '.| "\(.appId) \(.password)"')
 
-then login as that service principal
+APP_ID=$(echo $SP_METADATA | cut -d ' ' -f1)
+PASSWORD=$(echo $SP_METADATA | cut -d ' ' -f2)
+
+```
+
+Login as that service principal
 ```bash
 TENANT_ID=$(az account show | jq -r '.homeTenantId')
 
@@ -54,32 +57,51 @@ az login --service-principal -u $APP_ID -p $PASSWORD --tenant $TENANT_ID
 
 In this section, we will create a tools resource group in Azure which will contain our Jumpbox and Harbor Container Registry along with necessary services to support an airgapped installation of TMC-sm.
 
+Create a variables file and update the values inside to suit your need:
+```bash
+cat <<EOF > .envrc
+export LOCATION=eastus
+export STORAGE_ACCOUNT=mpmtmc
+export PRIVATE_DNS_ZONE=mpmtmclab.io
+EOF
+```
 
-Create resource group for common tools
+Source the file to export the variables for your session:
+```bash
+source .envrc
+```
+
 > Note: location will differ depending on what cloud you are targeting and your use geographic location. To get a list of locations for your targeted cloud, run `az account list-locations | jq -r '.[].name'`
 
+
+Create resource group for common tools
 ```bash
-az group create --resource-group tools -l $location
+az group create --resource-group tools -l $LOCATION
 ```
 
 Create a storage account in the tools resource group. This storage account will be used for offline artifact storage and as a velero backup location for TMC-sm later
 ```bash
-az storage account create -n mpmtmc -g tools -l $location --sku Standard_LRS
+az storage account create -n $STORAGE_ACCOUNT -g tools -l $LOCATION --sku Standard_LRS
 ```
 
 Create a file share within the above storage account to be used as a mount on your jumpbox vm later
 ```bash
-az storage share create --account-name mpmtmc --name airgapped-files
+az storage share create --account-name $STORAGE_ACCOUNT --name airgapped-files
+```
+
+Create a container within the same storage account to be used for velero backups for TMC:
+```bash
+az storage container create -g tools -n backups --account-name $STORAGE_ACCOUNT
 ```
 
 Grab a connection string for the file share to upload / download files
 ```bash
-export CONNECTION_STRING=$(az storage account show-connection-string --name mpmtmc --resource-group tools | jq -r '.connectionString')
+export CONNECTION_STRING=$(az storage account show-connection-string --name $STORAGE_ACCOUNT --resource-group tools | jq -r '.connectionString')
 ```
 
 Download the TMC bundle and upload it to the file share
 ```bash
-az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name mpmtmc --source bundle-1.0.0.tar
+az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name $STORAGE_ACCOUNT --source bundle-1.0.0.tar
 ```
 
 Create vnet for tools network where jumpbox, harbor, etc, will go
@@ -112,6 +134,15 @@ Create the offline Harbor VM with no public ip and assign above nsg to the vm on
 az vm create --resource-group tools --name harbor --image Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:22.04.202307010 --ssh-key-values ~/.ssh/tmc.pub --nsg internal --vnet-name tools --subnet tools --public-ip-address "" --size Standard_D4s_v3 --os-disk-size-gb 160 --admin-username ubuntu
 ```
 
+SSH to the jumpbox:
+```bash
+jumpbox_nic_id=$(az vm show -g tools -n jumpbox | jq -r '.networkProfile.networkInterfaces[0].id')
+jumpbox_public_ip_id=$(az network nic show --ids $jumpbox_nic_id | jq -r '.ipConfigurations[0].publicIPAddress.id')
+jumpbox_public_ip=$(az network public-ip show --ids $jumpbox_public_ip_id | jq -r '.ipAddress')
+
+ssh -i ~/.ssh/tmc ubuntu@$jumpbox_public_ip
+```
+
 After ssh'ing to the server validate egress to internet is blocked:
 ```bash
 ubuntu@jumpbox:~$ nc -zv projects.registry.vmware.com 443 -w2
@@ -123,7 +154,7 @@ nc: connect to projects.registry.vmware.com port 443 (tcp) failed: Network is un
 Disabling internet egress also disabled ability to connect to Azure services like storage accounts and file shares. In order to connect to these services we need to add private endpoints for our storage account in order to traverse the microsoft backbone without going over public internet. More info [here](https://learn.microsoft.com/en-us/azure/storage/files/storage-files-networking-endpoints?tabs=azure-cli).
 
 
-Disable private endpoint network policies for the tools subnet
+Exit out of the jumpbox and disable private endpoint network policies for the tools subnet
 ```bash
 subnet_id=$(az network vnet subnet show -g tools --vnet-name tools -n tools | jq -r '.id')
 
@@ -132,11 +163,11 @@ az network vnet subnet update --ids $subnet_id --disable-private-endpoint-networ
 
 Create the private endpoints for fileshare and blob storage
 ```bash
-storage_account_id=$(az storage account show -g tools -n mpmtmc | jq -r '.id')
+storage_account_id=$(az storage account show -g tools -n $STORAGE_ACCOUNT | jq -r '.id')
 
-az network private-endpoint create -g tools -n mpmtmc-file-private-endpoint --subnet $subnet_id --private-connection-resource-id $storage_account_id --group-id "file" --connection-name mpmtmc-file-connection
+az network private-endpoint create -g tools -n $STORAGE_ACCOUNT-file-private-endpoint --subnet $subnet_id --private-connection-resource-id $storage_account_id --group-id "file" --connection-name $STORAGE_ACCOUNT-file-connection
 
-az network private-endpoint create -g tools -n mpmtmc-blob-private-endpoint --subnet $subnet_id --private-connection-resource-id $storage_account_id --group-id "blob" --connection-name mpmtmc-blob-connection
+az network private-endpoint create -g tools -n $STORAGE_ACCOUNT-blob-private-endpoint --subnet $subnet_id --private-connection-resource-id $storage_account_id --group-id "blob" --connection-name $STORAGE_ACCOUNT-blob-connection
 ```
 
 Create private DNS zones for the fileshare and blob storage endpoints
@@ -155,22 +186,35 @@ az network private-dns link vnet create -g tools --zone-name privatelink.blob.co
 
 Create a DNS A record for the fileshare and blob storage endpoints
 ```bash
-file_private_endpoint_nic_id=$(az network private-endpoint show -g tools -n mpmtmc-file-private-endpoint | jq -r '.networkInterfaces[0].id')
+file_private_endpoint_nic_id=$(az network private-endpoint show -g tools -n $STORAGE_ACCOUNT-file-private-endpoint | jq -r '.networkInterfaces[0].id')
 file_private_endpoint_ip=$(az network nic show --ids $file_private_endpoint_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
 
-blob_private_endpoint_nic_id=$(az network private-endpoint show -g tools -n mpmtmc-blob-private-endpoint | jq -r '.networkInterfaces[0].id')
+blob_private_endpoint_nic_id=$(az network private-endpoint show -g tools -n $STORAGE_ACCOUNT-blob-private-endpoint | jq -r '.networkInterfaces[0].id')
 blob_private_endpoint_ip=$(az network nic show --ids $blob_private_endpoint_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
 
-az network private-dns record-set a create -g tools --zone-name privatelink.file.core.windows.net --name mpmtmc
-az network private-dns record-set a add-record -g tools --zone-name privatelink.file.core.windows.net --record-set-name mpmtmc --ipv4-address $file_private_endpoint_ip
+az network private-dns record-set a create -g tools --zone-name privatelink.file.core.windows.net --name $STORAGE_ACCOUNT
+az network private-dns record-set a add-record -g tools --zone-name privatelink.file.core.windows.net --record-set-name $STORAGE_ACCOUNT --ipv4-address $file_private_endpoint_ip
 
-az network private-dns record-set a create -g tools --zone-name privatelink.blob.core.windows.net --name mpmtmc
-az network private-dns record-set a add-record -g tools --zone-name privatelink.blob.core.windows.net --record-set-name mpmtmc --ipv4-address $blob_private_endpoint_ip
+az network private-dns record-set a create -g tools --zone-name privatelink.blob.core.windows.net --name $STORAGE_ACCOUNT
+az network private-dns record-set a add-record -g tools --zone-name privatelink.blob.core.windows.net --record-set-name $STORAGE_ACCOUNT --ipv4-address $blob_private_endpoint_ip
 ```
 
 Test connectivity to the file share from the jumpbox now that the private endpoint, private dns zone, dns vnet link and dns A record were created for the storage account / file share
 ```bash
-ubuntu@jumpbox:~$ nslookup mpmtmc.file.core.windows.net
+scp -i ~/.ssh/tmc .envrc ubuntu@$jumpbox_public_ip:.
+ssh -i ~/.ssh/tmc ubuntu@$jumpbox_public_ip
+source .envrc
+
+nslookup $STORAGE_ACCOUNT.file.core.windows.net
+nslookup $STORAGE_ACCOUNT.blob.core.windows.net
+
+nc -zv $STORAGE_ACCOUNT.file.core.windows.net 443
+nc -zv $STORAGE_ACCOUNT.blob.core.windows.net 443
+```
+
+The output should look similar to below example:
+```bash
+ubuntu@jumpbox:~$ nslookup $STORAGE_ACCOUNT.file.core.windows.net
 Server:		127.0.0.53
 Address:	127.0.0.53#53
 
@@ -179,7 +223,7 @@ mpmtmc.file.core.windows.net	canonical name = mpmtmc.privatelink.file.core.windo
 Name:	mpmtmc.privatelink.file.core.windows.net
 Address: 10.0.0.5
 
-ubuntu@jumpbox:~$ nc -zv mpmtmc.file.core.windows.net 443
+ubuntu@jumpbox:~$ nc -zv $STORAGE_ACCOUNT.file.core.windows.net 443
 Connection to mpmtmc.file.core.windows.net (10.0.0.5) 443 port [tcp/https] succeeded!
 ```
 
@@ -207,12 +251,12 @@ wget https://download.docker.com/linux/ubuntu/dists/jammy/pool/stable/amd64/dock
 # docker-compose-plugin
 wget https://download.docker.com/linux/ubuntu/dists/jammy/pool/stable/amd64/docker-compose-plugin_2.18.1-1~ubuntu.22.04~jammy_amd64.deb
 
-export CONNECTION_STRING=$(az storage account show-connection-string --name mpmtmc --resource-group tools | jq -r '.connectionString')
-az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name mpmtmc --source harbor-offline-installer-v2.8.1.tgz
-az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name mpmtmc --source containerd.io_1.6.9-1_amd64.deb
-az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name mpmtmc --source docker-ce_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
-az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name mpmtmc --source docker-ce-cli_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
-az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name mpmtmc --source docker-compose-plugin_2.18.1-1~ubuntu.22.04~jammy_amd64.deb
+export CONNECTION_STRING=$(az storage account show-connection-string --name $STORAGE_ACCOUNT --resource-group tools | jq -r '.connectionString')
+az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name $STORAGE_ACCOUNT --source harbor-offline-installer-v2.8.1.tgz
+az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name $STORAGE_ACCOUNT --source containerd.io_1.6.9-1_amd64.deb
+az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name $STORAGE_ACCOUNT --source docker-ce_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
+az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name $STORAGE_ACCOUNT --source docker-ce-cli_24.0.2-1~ubuntu.22.04~jammy_amd64.deb
+az storage file upload --connection-string $CONNECTION_STRING --share-name airgapped-files --account-name $STORAGE_ACCOUNT --source docker-compose-plugin_2.18.1-1~ubuntu.22.04~jammy_amd64.deb
 ```
 
 [back-to-top](#contents)
@@ -318,20 +362,20 @@ cd /data/harbor
 With harbor now stood up, we need to create a private DNS zone that has an A record for Harbor and eventually wildcard records for TMC-sm
 
 ```bash
-# Create private dns zone for mpmtkglab.io
-az network private-dns zone create -g tools --name mpmtkglab.io
+# Create private dns zone for $PRIVATE_DNS_ZONE
+az network private-dns zone create -g tools --name $PRIVATE_DNS_ZONE
 
 # Create dns vnet link for the above zone to the tools vnet
 network_id=$(az network vnet show -g tools -n tools | jq -r '.id')
-az network private-dns link vnet create -g tools --zone-name mpmtkglab.io --name tools-dnslink --virtual-network $network_id --registration-enabled false
+az network private-dns link vnet create -g tools --zone-name $PRIVATE_DNS_ZONE --name tools-dnslink --virtual-network $network_id --registration-enabled false
 
 # Grab the Harbor private IP address
 harbor_nic_id=$(az vm show -g tools -n harbor | jq -r '.networkProfile.networkInterfaces[0].id')
 harbor_private_ip=$(az network nic show --ids $harbor_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
 
 #Create the DNS A record for harbor using the private ip address
-az network private-dns record-set a create -g tools --zone-name mpmtkglab.io --name harbor
-az network private-dns record-set a add-record -g tools --zone-name mpmtkglab.io --record-set-name harbor --ipv4-address $harbor_private_ip
+az network private-dns record-set a create -g tools --zone-name $PRIVATE_DNS_ZONE --name harbor
+az network private-dns record-set a add-record -g tools --zone-name $PRIVATE_DNS_ZONE --record-set-name harbor --ipv4-address $harbor_private_ip
 ```
 
 [back-to-top](#contents)
@@ -352,7 +396,7 @@ On the jumpbox we will use the file share to extract the tmc-sm bundle and push 
 mkdir ~/tmc
 tar -xf /mnt/airgapped-files/bundle-1.0.0.tar -C ~/tmc/
 
-export HARBOR_PROJECT=harbor.mpmtkglab.io/tmc
+export HARBOR_PROJECT=harbor.$PRIVATE_DNS_ZONE/tmc
 export HARBOR_USERNAME=admin
 export HARBOR_PASSWORD=REDACTED
 
@@ -460,7 +504,7 @@ network_id=$(az network vnet show -g tools -n tools | jq -r '.id')
 tmc_network_id=$(az network vnet show -g tmcsm -n tmcsm | jq -r '.id')
 
 az network private-dns link vnet create -g $aks_resource_group --zone-name $aks_private_dns_zone_name --name tools-dnslink --virtual-network $network_id --registration-enabled false
-az network private-dns link vnet create -g tools --zone-name mpmtkglab.io --name tmc-dnslink --virtual-network $tmc_network_id --registration-enabled false
+az network private-dns link vnet create -g tools --zone-name $PRIVATE_DNS_ZONE --name tmc-dnslink --virtual-network $tmc_network_id --registration-enabled false
 ```
 
 Export the kubeconfig for the cluster:
