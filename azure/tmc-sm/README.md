@@ -12,8 +12,9 @@
     - [Push TMC Images to Harbor](#push-tmc-images-to-harbor)
   - [TMC-SM Infra](#tmc-sm-infra-paving)
     - [Create Azure Firewall](#create-azure-firewall)
+    - [Add Custom CA Extension](#add-custom-ca-extension)
     - [Create Airgapped AKS Cluster](#create-airgapped-aks-cluster)
-    - [Add Custom CA to AKS CLuster](#add-custom-ca-to-aks-cluster)
+    - [Connect to the AKS Cluster](#connect-to-the-aks-cluster)
 - [Airgapped TMC-SM Install](#airgapped-tmc-sm-install)
 
 ## Prerequisites
@@ -399,11 +400,7 @@ az network private-dns zone create -g tools --name $PRIVATE_DNS_ZONE
 network_id=$(az network vnet show -g tools -n tools | jq -r '.id')
 az network private-dns link vnet create -g tools --zone-name $PRIVATE_DNS_ZONE --name tools-dnslink --virtual-network $network_id --registration-enabled false
 
-# Grab the Harbor private IP address
-harbor_nic_id=$(az vm show -g tools -n harbor | jq -r '.networkProfile.networkInterfaces[0].id')
-harbor_private_ip=$(az network nic show --ids $harbor_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
-
-#Create the DNS A record for harbor using the private ip address
+# Create the DNS A record for harbor using the private ip address
 az network private-dns record-set a create -g tools --zone-name $PRIVATE_DNS_ZONE --name harbor
 az network private-dns record-set a add-record -g tools --zone-name $PRIVATE_DNS_ZONE --record-set-name harbor --ipv4-address $harbor_private_ip
 ```
@@ -417,7 +414,10 @@ Login to the Harbor UI and create a public project called `tmc`
 
 We need to add the CA cert for harbor to the list of trusted CAs on the jumpbox
 ```
-sudo cp ~/certs/certman_ca.crt /usr/local/share/ca-certificates/
+scp -r certs/ tmcsmjumpbox:.
+ssh tmcsmjumpbox
+
+sudo cp ~/certs/ca.crt /usr/local/share/ca-certificates/
 sudo update-ca-certificates
 ```
 
@@ -426,9 +426,10 @@ On the jumpbox we will use the file share to extract the tmc-sm bundle and push 
 mkdir ~/tmc
 tar -xf /mnt/airgapped-files/bundle-1.0.0.tar -C ~/tmc/
 
+source ~/.envrc
 export HARBOR_PROJECT=harbor.$PRIVATE_DNS_ZONE/tmc
 export HARBOR_USERNAME=admin
-export HARBOR_PASSWORD=REDACTED
+export HARBOR_PASSWORD=REPLACE_ME
 
 ~/tmc/tmc-sm push-images harbor
 ```
@@ -439,7 +440,7 @@ export HARBOR_PASSWORD=REDACTED
 
 Create tmc-sm resource group and vnet
 ```
-az group create --resource-group tmcsm -l eastus
+az group create --resource-group tmcsm -l $LOCATION
 az network vnet create -g tmcsm -n tmcsm --address-prefix 10.1.0.0/16 --subnet-name tmcsm --subnet-prefix 10.1.0.0/24
 ```
 
@@ -519,34 +520,7 @@ az network firewall application-rule create  --firewall-name aksfw --collection-
 
 [back-to-top](#contents)
 
-## Create Airgapped AKS cluster
-
-Create AKS private cluster with user defined routes
-```bash
-az aks create -n tmc-sm -g tmcsm --disable-public-fqdn --enable-private-cluster --max-pods 40 --enable-cluster-autoscaler --min-count 1 --max-count 7 --network-plugin azure --network-policy calico --node-vm-size standard_d4s_v3 --node-osdisk-size 40 --os-sku Ubuntu --private-dns-zone system --service-cidr 10.0.0.0/16 --dns-service-ip 10.0.0.10 --vnet-subnet-id $subnet_id --zones 1 --zones 2 --zones 3 --outbound-type userDefinedRouting --load-balancer-sku standard --client-secret $CLIENT_SECRET --service-principal $CLIENT_ID
-```
-
-Create dns vnet link for the private dns zone created as part of the aks cluster creation as well as for the priavte dns zone for our tmc private dns zone:
-```bash
-aks_resource_group=$(az group list | jq -r '.[] | select(.tags."aks-managed-cluster-name" == "tmc-sm") .name')
-aks_private_dns_zone_name=$(az network private-dns zone list -g $aks_resource_group | jq -r '.[0].name')
-network_id=$(az network vnet show -g tools -n tools | jq -r '.id')
-tmc_network_id=$(az network vnet show -g tmcsm -n tmcsm | jq -r '.id')
-
-az network private-dns link vnet create -g $aks_resource_group --zone-name $aks_private_dns_zone_name --name tools-dnslink --virtual-network $network_id --registration-enabled false
-az network private-dns link vnet create -g tools --zone-name $PRIVATE_DNS_ZONE --name tmc-dnslink --virtual-network $tmc_network_id --registration-enabled false
-```
-
-Export the kubeconfig for the cluster:
-```bash
-az aks get-credentials -g tmcsm -n tmc-sm -f tmc-kubeconfig.yaml
-```
-
-SCP the kubeconfig file to the jumpbox and install kubectl from the fileshare mount to access your cluster
-
-[back-to-top](#contents)
-
-## Add Custom CA to AKS CLuster
+## Add Custom CA Extension
 
 In order to add our custom CA to the AKS cluster's nodes we will need to install an azure extension and register a feature flag
 ```bash
@@ -567,9 +541,47 @@ Refresh the registration of the Microsoft.ContainerService resource provider:
 az provider register --namespace Microsoft.ContainerService
 ```
 
-Now add the custom CA to the AKS nodes:
+## Create Airgapped AKS cluster
+
+Create AKS private cluster with user defined routes
 ```bash
-az aks update -g tmcsm -n tmc-sm --custom-ca-trust-certificates certs/ca.crt 
+tmcsm_subnet_id=$(az network vnet subnet show -g tmcsm -n tmcsm --vnet-name tmcsm | jq -r '.id')
+az aks create -n tmc-sm -g tmcsm --disable-public-fqdn --enable-private-cluster --max-pods 40 --enable-cluster-autoscaler --min-count 1 --max-count 7 --network-plugin azure --network-policy calico --node-vm-size standard_d4s_v3 --node-osdisk-size 40 --os-sku Ubuntu --private-dns-zone system --service-cidr 10.0.0.0/16 --dns-service-ip 10.0.0.10 --vnet-subnet-id $tmcsm_subnet_id --zones 1 --zones 2 --zones 3 --outbound-type userDefinedRouting --load-balancer-sku standard --client-secret $PASSWORD --service-principal $APP_ID --enable-custom-ca-trust --custom-ca-trust-certificates certs/ca.crt
+```
+
+Create dns vnet link for the private dns zone created as part of the aks cluster creation as well as for the priavte dns zone for our tmc private dns zone:
+```bash
+aks_resource_group=$(az group list | jq -r '.[] | select(.tags."aks-managed-cluster-name" == "tmc-sm") .name')
+aks_private_dns_zone_name=$(az network private-dns zone list -g $aks_resource_group | jq -r '.[0].name')
+network_id=$(az network vnet show -g tools -n tools | jq -r '.id')
+tmc_network_id=$(az network vnet show -g tmcsm -n tmcsm | jq -r '.id')
+
+az network private-dns link vnet create -g $aks_resource_group --zone-name $aks_private_dns_zone_name --name tools-dnslink --virtual-network $network_id --registration-enabled false
+az network private-dns link vnet create -g tools --zone-name $PRIVATE_DNS_ZONE --name tmc-dnslink --virtual-network $tmc_network_id --registration-enabled false
+```
+
+[back-to-top](#contents)
+
+
+## Connect to the AKS Cluster
+
+Export the kubeconfig for the cluster:
+```bash
+az aks get-credentials -g tmcsm -n tmc-sm -f tmc-kubeconfig.yaml
+```
+
+SCP the kubeconfig file to the jumpbox and install kubectl from the fileshare mount to access your cluster
+```bash
+scp tmc-kubeconfig.yaml tmcsmjumpbox:.
+ssh tmcsmjumpbox
+
+mkdir ~/.kube
+mv ~/tmc-kubeconfig.yaml ~/.kube/config
+```
+
+Install kubectl
+```bash
+sudo install -m 0755 /mnt/airgapped-files/kubectl /usr/local/bin
 ```
 
 [back-to-top](#contents)

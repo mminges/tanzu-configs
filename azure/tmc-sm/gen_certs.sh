@@ -1,5 +1,6 @@
 #!/bin/bash
 
+source .envrc
 mkdir certs
 
 # heredoc to create the CA config
@@ -16,11 +17,11 @@ stateOrProvinceName = Colorado
 localityName = Denver
 organizationName = lab
 organizationalUnitName = IT
-commonName = tmcsmlab.io
+commonName = $PRIVATE_DNS_ZONE
 [ ext ]
 keyUsage=critical,keyCertSign,cRLSign,digitalSignature
 basicConstraints=critical,CA:true,pathlen:1
-subjectAltName=DNS:tmcsmlab.io
+subjectAltName=DNS:$PRIVATE_DNS_ZONE
 EOF
 
 # generate the CA cert and key
@@ -40,14 +41,14 @@ ST=Colorado
 L=Denver
 O=lab
 OU=IT
-CN=harbor.tmcsmlab.io
+CN=harbor.$PRIVATE_DNS_ZONE
 
 [ req_ext ]
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = harbor.tmcsmlab.io
-DNS.2 = notary.tmcsmlab.io
+DNS.1 = harbor.$PRIVATE_DNS_ZONE
+DNS.2 = notary.$PRIVATE_DNS_ZONE
 EOF
 
 # Generate a CSR for Harbor
@@ -57,8 +58,8 @@ openssl req -sha256 -nodes -new -newkey rsa:4096 -out certs/harbor.csr -keyout c
 cat <<EOF > certs/v3.ext
 subjectAltName = @alt_names
 [alt_names]
-DNS.1=harbor.tmcsmlab.io
-DNS.2=notary.tmcsmlab.io
+DNS.1=harbor.$PRIVATE_DNS_ZONE
+DNS.2=notary.$PRIVATE_DNS_ZONE
 EOF
 
 # Sign Harbor CSR using the CA we created
