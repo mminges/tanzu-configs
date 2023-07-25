@@ -96,6 +96,12 @@ az network nsg rule create -g tools --nsg-name internal -n DenyInternet --priori
 az network nsg rule create -g tools --nsg-name internal -n AllowSSH --priority 100 --destination-port-ranges '22' --access Allow --protocol 'TCP' --direction Inbound
 ```
 
+Create an SSH key pair for TMC:
+```bash
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/tmc -q -N ""
+```
+
+
 Create ubuntu 22.04 vm with 100 gb disk and assign above nsg to the vm on the tools vnet and subnet
 ```bash
 az vm create --resource-group tools --name jumpbox --image Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:22.04.202307010 --ssh-key-values ~/.ssh/tmc.pub --nsg internal --vnet-name tools --subnet tools --public-ip-sku Standard --size Standard_D2s_v3 --os-disk-size-gb 100 --admin-username ubuntu
@@ -124,35 +130,42 @@ subnet_id=$(az network vnet subnet show -g tools --vnet-name tools -n tools | jq
 az network vnet subnet update --ids $subnet_id --disable-private-endpoint-network-policies
 ```
 
-Create the private endpoint
+Create the private endpoints for fileshare and blob storage
 ```bash
 storage_account_id=$(az storage account show -g tools -n mpmtmc | jq -r '.id')
 
-az network private-endpoint create -g tools -n mpmtmc-privateendpoint --subnet $subnet_id --private-connection-resource-id $storage_account_id --group-id "file" --connection-name
-mpmtmc-connection
+az network private-endpoint create -g tools -n mpmtmc-file-private-endpoint --subnet $subnet_id --private-connection-resource-id $storage_account_id --group-id "file" --connection-name mpmtmc-file-connection
+
+az network private-endpoint create -g tools -n mpmtmc-blob-private-endpoint --subnet $subnet_id --private-connection-resource-id $storage_account_id --group-id "blob" --connection-name mpmtmc-blob-connection
 ```
 
-Create a private DNS zone for the private endpoint
+Create private DNS zones for the fileshare and blob storage endpoints
 ```bash
 az network private-dns zone create -g tools --name privatelink.file.core.windows.net
+az network private-dns zone create -g tools --name privatelink.blob.core.windows.net
 ```
 
-Create a dns vnet link in our private dns zone and link it to the tools vnet
+Create a dns vnet link in our private dns zone for the fileshare and blob storage and link it to the tools vnet
 ```bash
 network_id=$(az network vnet show -g tools -n tools | jq -r '.id')
 
 az network private-dns link vnet create -g tools --zone-name privatelink.file.core.windows.net --name tools-dnslink --virtual-network $network_id --registration-enabled false
+az network private-dns link vnet create -g tools --zone-name privatelink.blob.core.windows.net --name tools-dnslink --virtual-network $network_id --registration-enabled false
 ```
 
-Create a DNS A record for the storage account / file share
+Create a DNS A record for the fileshare and blob storage endpoints
 ```bash
-private_endpoint_nic_id=$(az network private-endpoint show -g tools -n mpmtmc-privateendpoint | jq -r '.networkInterfaces[0].id')
+file_private_endpoint_nic_id=$(az network private-endpoint show -g tools -n mpmtmc-file-private-endpoint | jq -r '.networkInterfaces[0].id')
+file_private_endpoint_ip=$(az network nic show --ids $file_private_endpoint_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
 
-private_endpoint_ip=$(az network nic show --ids $private_endpoint_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
+blob_private_endpoint_nic_id=$(az network private-endpoint show -g tools -n mpmtmc-blob-private-endpoint | jq -r '.networkInterfaces[0].id')
+blob_private_endpoint_ip=$(az network nic show --ids $blob_private_endpoint_nic_id | jq -r '.ipConfigurations[0].privateIPAddress')
 
 az network private-dns record-set a create -g tools --zone-name privatelink.file.core.windows.net --name mpmtmc
+az network private-dns record-set a add-record -g tools --zone-name privatelink.file.core.windows.net --record-set-name mpmtmc --ipv4-address $file_private_endpoint_ip
 
-az network private-dns record-set a add-record -g tools --zone-name privatelink.file.core.windows.net --record-set-name mpmtmc --ipv4-address $private_endpoint_ip
+az network private-dns record-set a create -g tools --zone-name privatelink.blob.core.windows.net --name mpmtmc
+az network private-dns record-set a add-record -g tools --zone-name privatelink.blob.core.windows.net --record-set-name mpmtmc --ipv4-address $blob_private_endpoint_ip
 ```
 
 Test connectivity to the file share from the jumpbox now that the private endpoint, private dns zone, dns vnet link and dns A record were created for the storage account / file share
@@ -265,6 +278,11 @@ Add the contents of the ca cert to the harbor chain:
 cat /home/ubuntu/certs/ca.crt >> /data/harbor-chain.crt
 ```
 
+Copy harbor.key to the data directory:
+```bash
+cp /home/ubuntu/certs/harbor.key /data/
+```
+
 Copy ca cert into ca-certificates:
 ```bash
 cp /home/ubuntu/certs/ca.crt /usr/local/share/ca-certificates/
@@ -358,6 +376,13 @@ tools_vnet_id=$(az network vnet show -g tools -n tools | jq -r '.id')
 
 az network vnet peering create -g tools -n tools-to-tmc --vnet-name tools --remote-vnet $tmcsm_vnet_id --allow-vnet-access
 az network vnet peering create -g tmcsm -n tmc-to-tools --vnet-name tmcsm --remote-vnet $tools_vnet_id --allow-vnet-access
+```
+
+Create a dns vnet link in our private dns zone for the blob endpoint and link it to the tmcsm vnet. This is needed in order for velero to backup to a container in the storage account
+```bash
+tmcsm_network_id=$(az network vnet show -g tmcsm -n tmcsm | jq -r '.id')
+
+az network private-dns link vnet create -g tools --zone-name privatelink.blob.core.windows.net --name tmcsm-dnslink --virtual-network $tmcsm_network_id --registration-enabled false
 ```
 
 [back-to-top](#contents)
