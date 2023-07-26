@@ -6,7 +6,7 @@ metadata:
   namespace: tanzu-continuousdelivery-resources
 spec:
   interval: 1m0s
-  path: ../../base/cert-manager
+  path: azure/tmc-sm/base/cert-manager
   prune: true
   sourceRef:
     kind: GitRepository
