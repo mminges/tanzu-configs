@@ -21,6 +21,7 @@ spec:
   issuerRef:
     kind: ClusterIssuer
     name: local-ca
+    group: cert-manager.io
   privateKey:
     algorithm: RSA
     encoding: PKCS8
