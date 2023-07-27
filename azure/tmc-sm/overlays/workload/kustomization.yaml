@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
 - tanzu-packages-cert-manager.yaml
 - local-issuer.yaml
+- openldap.yaml

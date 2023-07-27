@@ -1,0 +1,247 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: openldap
+spec: {}
+status: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ldap
+  namespace: openldap
+spec:
+  commonName: openldap.openldap.svc.cluster.local
+  dnsNames:
+  - openldap
+  - openldap.openldap.svc
+  - openldap.openldap.svc.cluster.local
+  issuerRef:
+    kind: ClusterIssuer
+    name: local-ca
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS8
+    size: 4096
+  secretName: ldap
+  usages:
+  - server auth
+  - key encipherment
+  - digital signature
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openldap
+  namespace: openldap
+  labels:
+    app: openldap
+    chart: openldap-1.2.7
+    release: openldap
+    heritage: Helm
+type: Opaque
+data:
+  LDAP_ADMIN_PASSWORD: "cGFzc3dvcmQ="
+  LDAP_CONFIG_PASSWORD: "cGFzc3dvcmQ="
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openldap-customldif
+  namespace: openldap
+  labels:
+    app: openldap
+    chart: openldap-1.2.7
+    release: openldap
+    heritage: Helm
+data:
+  0-initial-ous.ldif: |-
+    dn: ou=People,dc=pinniped,dc=dev
+    objectClass: organizationalUnit
+    ou: People
+
+    dn: ou=Group,dc=pinniped,dc=dev
+    objectClass: organizationalUnit
+    ou: Group
+
+    dn: cn=tanzu,ou=People,dc=pinniped,dc=dev
+    objectclass: inetOrgPerson
+    cn: tanzu
+    sn: tanzu
+    uid: tanzu
+    userPassword: {SSHA}mBj6frepLy1wj7uG/XnBuyRMqYNEZt3+
+
+    dn: cn=tmc:admin,ou=Group,dc=pinniped,dc=dev
+    objectclass: groupOfUniqueNames
+    cn: tmc:admin
+    uniqueMember: cn=tanzu,ou=People,dc=pinniped,dc=dev
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openldap-env
+  namespace: openldap
+  labels:
+    app: openldap
+    chart: openldap-1.2.7
+    release: openldap
+    heritage: Helm
+data:
+  LDAP_BACKEND: hdb
+  LDAP_DOMAIN: pinniped.dev
+  LDAP_ORGANISATION: VMware Tanzu POC
+  LDAP_READONLY_USER: "true"
+  LDAP_READONLY_USER_MASSWORD: password
+  LDAP_READONLY_USER_USERNAME: readonly
+  LDAP_REMOVE_CONFIG_AFTER_SETUP: "true"
+  LDAP_TLS: "true"
+  LDAP_TLS_CA_CRT_FILENAME: ca.crt
+  LDAP_TLS_CRT_FILENAME: tls.crt
+  LDAP_TLS_KEY_FILENAME: tls.key
+  BITNAMI_DEBUG: "true"
+  LDAP_ADMIN_USERNAME: admin
+  LDAP_ROOT: "dc=pinniped,dc=dev"
+  LDAP_USER_DC: "dc=pinniped,dc=dev"
+  LDAP_USERS: "pinny,wally"
+  LDAP_PASSWORDS: "pinny123,wally123"
+  LDAP_GROUP: "users"
+  LDAP_ENABLE_TLS: "yes"
+  LDAP_TLS_VERIFY_CLIENT: "try"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: openldap
+  namespace: openldap
+  labels:
+    app: openldap
+    chart: openldap-1.2.7
+    release: openldap
+    heritage: Helm
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "8Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openldap
+  namespace: openldap
+  labels:
+    app: openldap
+    chart: openldap-1.2.7
+    release: openldap
+    heritage: Helm
+spec:
+  ports:
+    - name: ldap-port
+      protocol: TCP
+      port: 389
+      targetPort: ldap-port
+    - name: ssl-ldap-port
+      protocol: TCP
+      port: 636
+      targetPort: ssl-ldap-port
+  selector:
+    app: openldap
+    release: openldap
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  openldap
+  namespace: openldap
+  labels:
+    app: openldap
+    chart: openldap-1.2.7
+    release: openldap
+    heritage: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openldap
+      release: openldap
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-env: b502f31965efa9ea311c824f4b24d0aeec8de07153c6ae790375455eafeada80
+        checksum/configmap-customldif: 456fe383c8b6c9aeccc479f7bd02eb5685596f3ccfada03de8c8384d8036216f
+      labels:
+        app: openldap
+        release: openldap
+    spec:
+      initContainers:
+      - name: openldap-init-ldif
+        image: projects.registry.vmware.com/tanzu_meta_pocs/tools/busybox:latest
+        command: ['sh', '-c', 'cp /customldif/* /ldifworkingdir']
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: customldif
+          mountPath: /customldif
+        - name: ldifworkingdir
+          mountPath: /ldifworkingdir
+        resources:
+          {}
+      containers:
+        - name: openldap
+          image: projects.registry.vmware.com/tanzu_meta_pocs/tools/openldap:1.2.4
+          imagePullPolicy: IfNotPresent
+          args:
+            - -l
+            - debug
+            - --copy-service
+          ports:
+            - name: ldap-port
+              containerPort: 389
+            - name: ssl-ldap-port
+              containerPort: 636
+          envFrom:
+            - configMapRef:
+                name: openldap-env
+            - secretRef:
+                name: openldap
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/ldap
+              subPath: data
+            - name: data
+              mountPath: /etc/ldap/slapd.d
+              subPath: config-data
+            - name: ldifworkingdir
+              mountPath: /container/service/slapd/assets/config/bootstrap/ldif/custom
+            - mountPath: /container/service/slapd/assets/certs
+              name: certs
+          livenessProbe:
+            tcpSocket:
+              port: ldap-port
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 10
+          readinessProbe:
+            tcpSocket:
+              port: ldap-port
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 10
+          resources:
+            {}
+      volumes:
+        - name: customldif
+          configMap:
+            name: openldap-customldif
+        - name: ldifworkingdir
+          emptyDir: {}
+        - name: certs
+          secret:
+            secretName: ldap
+        - name: data
+          persistentVolumeClaim:
+            claimName: openldap

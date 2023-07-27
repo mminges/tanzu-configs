@@ -1,0 +1,26 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: openldap
+  namespace: tanzu-continuousdelivery-resources
+spec:
+  dependsOn:
+    - name: local-issuer
+  images:
+  - name: projects.registry.vmware.com/tanzu_meta_pocs/tools/busybox
+    newName: harbor.mpmtmclab.io/tmc/busybox
+  - name: projects.registry.vmware.com/tanzu_meta_pocs/tools/openldap
+    newName: harbor.mpmtmclab.io/tmc/openldap
+  interval: 1m0s
+  path: azure/tmc-sm/base/openldap
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: tanzu-configs
+    namespace: tanzu-continuousdelivery-resources
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: openldap
+      namespace: openldap
