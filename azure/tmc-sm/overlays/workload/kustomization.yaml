@@ -6,3 +6,4 @@ resources:
 - local-issuer.yaml
 - openldap.yaml
 - tmc-repo.yaml
+- tmc-install.yaml

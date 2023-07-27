@@ -1,0 +1,16 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: tmc-install
+  namespace: tanzu-continuousdelivery-resources
+spec:
+  dependsOn:
+    - name: tmc-repo
+  interval: 1m0s
+  path: azure/tmc-sm/base/tmc-install
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: tanzu-configs
+    namespace: tanzu-continuousdelivery-resources
