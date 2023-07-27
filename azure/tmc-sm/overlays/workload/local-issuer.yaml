@@ -14,3 +14,7 @@ spec:
     kind: GitRepository
     name: tanzu-configs
     namespace: tanzu-continuousdelivery-resources
+  healthChecks:
+    - apiVersion: cert-manager.io/v1
+      kind: ClusterIssuer
+      name: local-issuer
