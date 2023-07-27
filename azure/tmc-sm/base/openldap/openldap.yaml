@@ -8,14 +8,6 @@ spec: {}
 status: {}
 ---
 apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: ldap
-  namespace: openldap
-spec:
-  selfSigned: {}
----
-apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: ldap
@@ -27,8 +19,9 @@ spec:
   - openldap.openldap.svc
   - openldap.openldap.svc.cluster.local
   issuerRef:
-    kind: Issuer
-    name: ldap
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: local-issuer
   privateKey:
     algorithm: RSA
     encoding: PKCS8
