@@ -1,0 +1,102 @@
+---
+apiVersion: idp.supervisor.pinniped.dev/v1alpha1
+kind: LDAPIdentityProvider
+metadata:
+  name: tmc-self-managed
+  namespace: tmc-local
+spec:
+  bind:
+    secretName: openldap-bind-account
+  groupSearch:
+    attributes:
+      groupName: cn
+    base: dc=pinniped,dc=dev
+    filter: (objectClass=groupOfUniqueNames)
+  host: "openldap.openldap.svc.cluster.local"
+  tls:
+    certificateAuthorityData: |
+      -----BEGIN CERTIFICATE-----
+      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
+      N+lSwlZU/1PBxp0sg1wMFhmfp3/S9g==
+      -----END CERTIFICATE-----
+  userSearch:
+    attributes:
+      uid: cn
+      username: cn
+    base: dc=pinniped,dc=dev
+    filter: (objectClass=inetOrgPerson)
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openldap-bind-account
+  namespace: tmc-local
+type: kubernetes.io/basic-auth
+stringData:
+  username: "cn=admin,dc=pinniped,dc=dev"
+  password: "password"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ldap-overlay-secret
+  namespace: tmc-local
+stringData:
+  patch.yaml: |
+    #@ load("@ytt:data", "data")
+    #@ load("@ytt:overlay", "overlay")
+    ---
+    #@overlay/match missing_ok=True,by=overlay.subset({"kind":"OIDCIdentityProvider", "metadata": {"name": "pinniped-upstream"}})
+    ---
+    #@overlay/remove
+    apiVersion:
+    #@overlay/remove
+    kind:
+    #@overlay/remove
+    metadata:
+    #@overlay/remove
+    spec:
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tmc-overlay-override
+  namespace: tmc-local
+stringData:
+  patch-oidc.yaml: |
+    #@ load("@ytt:overlay", "overlay")
+    #@overlay/match by=overlay.subset({"kind":"PackageInstall", "metadata": {"name": "tmc-local-stack"}})
+    ---
+    metadata:
+      annotations:
+        #@overlay/match missing_ok=True
+        ext.packaging.carvel.dev/ytt-paths-from-secret-name.0: ldap-overlay-secret#@ load("@ytt:data", "data")

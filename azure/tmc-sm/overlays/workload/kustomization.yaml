@@ -7,3 +7,4 @@ resources:
 - openldap.yaml
 - tmc-repo.yaml
 - tmc-install.yaml
+- tmc-ldap-overlay.yaml

@@ -2,20 +2,15 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: tmc-install
+  name: tmc-ldap-overlay
   namespace: tanzu-continuousdelivery-resources
 spec:
   dependsOn:
-    - name: tmc-repo
+    - name: tmc-install
   interval: 1m0s
-  path: azure/tmc-sm/base/tmc-install
+  path: azure/tmc-sm/base/ldap-overlay
   prune: true
   sourceRef:
     kind: GitRepository
     name: tanzu-configs
     namespace: tanzu-continuousdelivery-resources
-  healthChecks:
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: pinniped-supervisor
-      namespace: tmc-local
