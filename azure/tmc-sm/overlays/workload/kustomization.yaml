@@ -5,3 +5,4 @@ resources:
 - tanzu-packages-cert-manager.yaml
 - local-issuer.yaml
 - openldap.yaml
+- tmc-repo.yaml

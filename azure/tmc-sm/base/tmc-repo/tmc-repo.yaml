@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: tmc-local
+spec: {}
+status: {}
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageRepository
+metadata:
+  annotations:
+    tkg.tanzu.vmware.com/tanzu-package: tanzu-mission-control-packages
+    kapp.k14s.io/update-strategy: "fallback-on-replace"
+  name: tanzu-mission-control-packages
+  namespace: tmc-local
+spec:
+  fetch:
+    imgpkgBundle:
+      image: harbor.mpmtmclab.io/tmc/package-repository:1.0.0
