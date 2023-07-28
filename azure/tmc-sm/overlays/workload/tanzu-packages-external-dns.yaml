@@ -1,0 +1,21 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: tanzu-packages-external-dns
+  namespace: tanzu-continuousdelivery-resources
+spec:
+  dependsOn:
+    - name: external-dns-overlay
+  interval: 1m0s
+  path: azure/tmc-sm/base/tanzu-packages-external-dns
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: tanzu-configs
+    namespace: tanzu-continuousdelivery-resources
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: external-dns
+      namespace: tanzu-system-service-discovery

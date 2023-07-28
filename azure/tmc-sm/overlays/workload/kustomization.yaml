@@ -5,6 +5,8 @@ resources:
 - tanzu-packages-cert-manager.yaml
 - local-issuer.yaml
 - openldap.yaml
+- external-dns-overlay.yaml
+- tanzu-packages-external-dns.yaml
 - tmc-repo.yaml
 - tmc-install.yaml
 - tmc-ldap-overlay.yaml

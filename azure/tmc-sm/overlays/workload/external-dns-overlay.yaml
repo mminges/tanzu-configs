@@ -1,0 +1,21 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: external-dns-overlay
+  namespace: tanzu-continuousdelivery-resources
+spec:
+  dependsOn:
+    - name: openldap
+  interval: 1m0s
+  path: azure/tmc-sm/base/external-dns-overlay
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: tanzu-configs
+    namespace: tanzu-continuousdelivery-resources
+  healthChecks:
+    - apiVersion: v1
+      kind: Secret
+      name: external-dns-packages-values
+      namespace: packages
