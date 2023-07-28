@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tanzu-continuousdelivery-resources
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: GitRepository
+metadata:
+  name: tanzu-configs
+  namespace: tanzu-continuousdelivery-resources
+spec:
+  interval: 1m
+  url: https://github.com/mminges/tanzu-configs.git
+  ref:
+    branch: master

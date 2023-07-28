@@ -1,0 +1,22 @@
+#@ load("@ytt:data", "data")
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: packages
+spec: {}
+status: {}
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageRepository
+metadata:
+  annotations:
+    tkg.tanzu.vmware.com/tanzu-package: package-repo-packages
+    kapp.k14s.io/update-strategy: "fallback-on-replace"
+  name: tanzu-std-repo
+  namespace: packages
+spec:
+  fetch:
+    imgpkgBundle:
+      image: #@ "harbor.{}/tmc/498533941640.dkr.ecr.us-west-2.amazonaws.com/packages/standard/repo:{}".format(data.values.private_dns_zone,data.values.std_repo_version)

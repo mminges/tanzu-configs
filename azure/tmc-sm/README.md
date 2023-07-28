@@ -16,6 +16,8 @@
     - [Create Airgapped AKS Cluster](#create-airgapped-aks-cluster)
     - [Connect to the AKS Cluster](#connect-to-the-aks-cluster)
 - [Airgapped TMC-SM Install](#airgapped-tmc-sm-install)
+  - [TMC-SM Setup](#tmcsm-setup)
+  - [TMC-SM GitOps Install](#gitops-install)
 
 ## Prerequisites
 
@@ -543,11 +545,15 @@ az provider register --namespace Microsoft.ContainerService
 
 ## Create Airgapped AKS cluster
 
-Create AKS private cluster with user defined routes
+Create AKS private cluster with user defined routes and autoscaling enabled
+
+> NOTE: If you do not wish to use autocale then remove `--enable-cluster-autoscaler --min-count 1 --max-count 7` from the above command. You can set the node count with `--node-count 5` for example
+
 ```bash
 tmcsm_subnet_id=$(az network vnet subnet show -g tmcsm -n tmcsm --vnet-name tmcsm | jq -r '.id')
 az aks create -n tmc-sm -g tmcsm --disable-public-fqdn --enable-private-cluster --max-pods 40 --enable-cluster-autoscaler --min-count 1 --max-count 7 --network-plugin azure --network-policy calico --node-vm-size standard_d4s_v3 --node-osdisk-size 40 --os-sku Ubuntu --private-dns-zone system --service-cidr 10.0.0.0/16 --dns-service-ip 10.0.0.10 --vnet-subnet-id $tmcsm_subnet_id --zones 1 --zones 2 --zones 3 --outbound-type userDefinedRouting --load-balancer-sku standard --client-secret $PASSWORD --service-principal $APP_ID --enable-custom-ca-trust --custom-ca-trust-certificates certs/ca.crt
 ```
+
 
 Create dns vnet link for the private dns zone created as part of the aks cluster creation as well as for the priavte dns zone for our tmc private dns zone:
 ```bash
@@ -589,12 +595,6 @@ sudo install -m 0755 /mnt/airgapped-files/kubectl /usr/local/bin
 ## Airgapped TMC-SM Install
 
 Leveraged the following github [repo](https://github.com/gorkemozlu/tanzu-gitops/tree/master/tmc-sm) for common configs to deploy TMC self-managed
-- deploy kapp-controller
-- deploy cert-manager
-- deploy openldap
-- deploy tmc
-- convert pinniped auth from oidc to openldap
-- create DNS records for `tmc.YOUR_DOMAIN` and `*.tmc.YOUR_DOMAIN` that point to the private load balancer ip for envoy
 
 In order to create a private loadbalancer for envoy you will need this annotation in your TMC values.yaml
 ```bash
@@ -602,6 +602,60 @@ contourEnvoy:
   serviceType: LoadBalancer
   serviceAnnotations:
     service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+```
+
+## TMS-SM Setup
+
+Deploy kapp-controller
+```bash
+ytt -f tmc-gitops-setup/01-kapp-controller.yaml -f certs/ -f values.yaml | kubectl apply -f -
+```
+
+Deploy standard repo packages. Provides packages like cert-manager and external-dns
+```bash
+ytt -f tmc-gitops-setup/02-std-repo.yaml -f values.yaml | kubectl apply -f -
+```
+
+Create service account and clusterrolebinding to be used by the supporting packages for TMC
+```bash
+kubectl apply -f tmc-gitops-setup/03-rbac.yaml
+```
+
+Apply the FluxCD Source Controller:
+```bash
+kubectl apply -f tmc-gitops-setup/04-fluxcd-source-controller.yaml
+```
+
+Apply the FluxCD Kustomize Controller:
+```bash
+kubectl apply -f tmc-gitops-setup/05-fluxcd-kustomize-controller.yaml
+```
+
+Create the fluxcd gitrepo:
+```bash
+kubectl apply -f tmc-gitops-setup/06-git-repository.yaml
+```
+
+Pre-create the TLS secret containing the CA cert used by cert-manager
+```bash
+./tmc-gitops-setup/07-create-local-ca-secret.sh
+```
+
+Pre-create the azure json credential used by external-dns to create A records in Azure Private DNS:
+```bash
+./tmc-gitops-setup/08-create-external-dns-secret.sh
+```
+
+## TMC-SM GitOps Install
+
+With the above setup complete, we just need to apply the FluxCD Kustomization that pulls gitops configs from this repo:
+```bash
+kubectl apply -f tanzu-packages-kustomization.yaml
+```
+
+After TMC kapp apps are reconciled, apply the patch to replace OIDC integration for TMC with LDAP:
+```bash
+./patch-tmc.sh
 ```
 
 [back-to-top](#contents)

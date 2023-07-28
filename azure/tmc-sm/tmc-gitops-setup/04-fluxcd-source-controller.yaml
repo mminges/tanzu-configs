@@ -1,0 +1,15 @@
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageInstall
+metadata:
+  annotations:
+    kapp.k14s.io/update-strategy: "fallback-on-replace"
+    kapp.k14s.io/create-strategy: "fallback-on-replace"
+  name: fluxcd-source-controller
+  namespace: packages
+spec:
+  serviceAccountName: tmcsm-gitops-sa
+  packageRef:
+    refName: fluxcd-source-controller.tanzu.vmware.com
+    versionSelection:
+      constraints: 0.33.0+vmware.1-tkg.1
